@@ -185,6 +185,12 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
 .audit-note{font-size:13px;color:var(--muted);font-style:italic;margin-top:6px;padding:10px 14px;border-left:2px solid var(--border);line-height:1.6}
 .audit-empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;line-height:1.6}
 
+/* LOADING OVERLAY */
+#loadingOverlay{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:var(--tr)}
+.loader-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.loader-text{font-size:13px;color:var(--muted);letter-spacing:.5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* RESPONSIVE */
 @media(max-width:1100px){
   .kpi-row{grid-template-columns:repeat(3,1fr)}
@@ -214,6 +220,10 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
 <header>
   <div class="logo">AEON<span>.ai</span></div>
   <div class="header-right">
+    <button class="theme-toggle" onclick="loadFromSheets()" title="Refresh data from Google Sheets">
+      <span class="t-icon">↻</span>
+      <span>Refresh</span>
+    </button>
     <button class="theme-toggle" onclick="toggleTheme()">
       <span class="t-icon" id="themeIcon">&#9728;&#65039;</span>
       <span id="themeLabel">Light Mode</span>
@@ -337,6 +347,12 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
   <div class="workload-grid" id="engineerGrid"></div>
 </main>
 
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="loadingMsg">Connecting to Google Sheets…</div>
+</div>
+
 <!-- AUDIT MODAL — READ ONLY -->
 <div class="modal-overlay" id="auditOverlay" onclick="handleOverlayClick(event)">
   <div class="modal-panel">
@@ -365,70 +381,197 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
 </div>
 
 <script>
-// ── DATA ──────────────────────────────────────────────────────────
-const ENGINEERS=[
-  {id:'JL',name:'Jordan Lee', color:'#00e5c0'},
-  {id:'MR',name:'Maya Reyes', color:'#6c63ff'},
-  {id:'TK',name:'Tariq Khan', color:'#ff6b6b'},
-  {id:'SC',name:'Sofia Chen', color:'#ffc857'},
-  {id:'DR',name:'Devon Ramos',color:'#74b9ff'},
-  {id:'AL',name:'Asha Lim',   color:'#ff9f43'},
-  {id:'NW',name:'Noah Walsh', color:'#a29bfe'},
-  {id:'EP',name:'Elena Park', color:'#55efc4'},
-];
+// ── GOOGLE SHEETS CONFIG ──────────────────────────────────────────
+// Two separate Google Sheets — one for projects, one for audit log.
+// Each entry has the workbook ID and the gid of the specific tab.
+const PROJECTS_SHEET = {
+  id:  '1b1wca9-GTm5UlKkC-biu348Md_kiVbhjC2QA-Wfsgy4',
+  gid: '137827075'
+};
+const AUDIT_SHEET = {
+  id:  '1udxbCynCaGQ9hNR6oGyOb56cozY6wP6JKZbqJLfZUEY',
+  gid: '1295996016'
+};
+
+// ── CONSTANTS ─────────────────────────────────────────────────────
+// Engineers are built dynamically from the AE Name column in the Projects sheet.
+// Colors cycle through this palette in the order names first appear.
+const ENGINEER_PALETTE = ['#00e5c0','#6c63ff','#ff6b6b','#ffc857','#74b9ff','#ff9f43','#a29bfe','#55efc4','#fd79a8','#00b894','#fab1a0','#81ecec'];
+let ENGINEERS = []; // populated by buildEngineers() after projects load
+
+function initialsOf(name){
+  const parts=name.trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return '?';
+  if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
+}
+
+function buildEngineers(){
+  // Use insertion order of AE Name as it appears in the projects data
+  const seen=new Set();
+  const names=[];
+  PROJECTS.forEach(p=>{
+    if(p.ae && !seen.has(p.ae)){ seen.add(p.ae); names.push(p.ae); }
+  });
+  ENGINEERS = names.map((name,i)=>({
+    id:    initialsOf(name),
+    name:  name,
+    color: ENGINEER_PALETTE[i % ENGINEER_PALETTE.length]
+  }));
+}
 const STAGES=['Discover','Design','Build','Test','Deploy','Execute','Monitor'];
 const SC={Discover:'#ff6b9d',Design:'#a29bfe',Build:'#74b9ff',Test:'#00cec9',Deploy:'#55efc4',Execute:'#fdcb6e',Monitor:'#e17055'};
 const PILLARS=['HR','Talent Acquisition','Finance','Marketing','Sales'];
 const PC={'HR':'#ff6b6b','Talent Acquisition':'#ff9f43','Finance':'#00e5c0','Marketing':'#6c63ff','Sales':'#ffc857'};
 const PCLS={'HR':'pill-hr','Talent Acquisition':'pill-ta','Finance':'pill-fin','Marketing':'pill-mkt','Sales':'pill-sales'};
 
-const PROJECTS=[
-  {name:'Employee Onboarding Flow',      pillar:'HR',                 stage:'Execute', progress:88, ae:'JL',priority:'High'},
-  {name:'Leave Request Automation',      pillar:'HR',                 stage:'Monitor', progress:100,ae:'MR',priority:'Medium'},
-  {name:'Performance Review Engine',     pillar:'HR',                 stage:'Test',    progress:55, ae:'TK',priority:'High'},
-  {name:'Policy Compliance Bot',         pillar:'HR',                 stage:'Build',   progress:40, ae:'SC',priority:'Low'},
-  {name:'Org Chart Sync',                pillar:'HR',                 stage:'Design',  progress:20, ae:'AL',priority:'Medium'},
-  {name:'Resume Screening AI',           pillar:'Talent Acquisition', stage:'Monitor', progress:100,ae:'DR',priority:'High'},
-  {name:'Interview Scheduler',           pillar:'Talent Acquisition', stage:'Execute', progress:75, ae:'NW',priority:'High'},
-  {name:'Candidate Pipeline Tracker',    pillar:'Talent Acquisition', stage:'Deploy',  progress:65, ae:'EP',priority:'Medium'},
-  {name:'Offer Letter Generator',        pillar:'Talent Acquisition', stage:'Test',    progress:50, ae:'JL',priority:'Medium'},
-  {name:'Job Posting Distributor',       pillar:'Talent Acquisition', stage:'Build',   progress:35, ae:'MR',priority:'Low'},
-  {name:'Invoice Processing Bot',        pillar:'Finance',            stage:'Monitor', progress:100,ae:'TK',priority:'High'},
-  {name:'Expense Report Classifier',     pillar:'Finance',            stage:'Execute', progress:82, ae:'SC',priority:'High'},
-  {name:'Budget Variance Alerts',        pillar:'Finance',            stage:'Deploy',  progress:68, ae:'DR',priority:'Medium'},
-  {name:'Vendor Payment Reconciler',     pillar:'Finance',            stage:'Build',   progress:42, ae:'AL',priority:'Medium'},
-  {name:'Audit Trail Automation',        pillar:'Finance',            stage:'Discover',progress:10, ae:'NW',priority:'Low'},
-  {name:'Campaign ROI Analyzer',         pillar:'Marketing',          stage:'Execute', progress:79, ae:'EP',priority:'High'},
-  {name:'Content Brief Generator',       pillar:'Marketing',          stage:'Deploy',  progress:60, ae:'JL',priority:'Medium'},
-  {name:'Social Listening Pipeline',     pillar:'Marketing',          stage:'Test',    progress:48, ae:'MR',priority:'Low'},
-  {name:'Email Sequence Optimizer',      pillar:'Marketing',          stage:'Design',  progress:22, ae:'TK',priority:'Medium'},
-  {name:'SEO Keyword Monitor',           pillar:'Marketing',          stage:'Discover',progress:8,  ae:'SC',priority:'Low'},
-  {name:'Lead Scoring Engine',           pillar:'Sales',              stage:'Monitor', progress:100,ae:'DR',priority:'High'},
-  {name:'CRM Data Enrichment',           pillar:'Sales',              stage:'Execute', progress:85, ae:'AL',priority:'High'},
-  {name:'Proposal Auto-Builder',         pillar:'Sales',              stage:'Build',   progress:38, ae:'NW',priority:'Medium'},
-  {name:'Churn Prediction Alert',        pillar:'Sales',              stage:'Design',  progress:18, ae:'EP',priority:'High'},
-];
+// ── LIVE DATA STATE ───────────────────────────────────────────────
+let PROJECTS = [];
+let LOGS     = {};
 
-// Seed audit log histories reflecting the lifecycle each project has travelled
-function seedLogs(){
-  const logs={}, now=Date.now(), day=86400000;
-  PROJECTS.forEach(p=>{
-    const si=STAGES.indexOf(p.stage);
-    const entries=[];
-    entries.push({type:'created',ts:now-(si*5+14)*day,fromStage:null,toStage:'Discover',note:'Project initialized in portfolio.'});
-    for(let i=1;i<=si;i++){
-      entries.push({type:'stage_change',ts:now-(si-i)*5*day-Math.floor(Math.random()*3)*day,fromStage:STAGES[i-1],toStage:STAGES[i],note:null});
-    }
-    entries.sort((a,b)=>b.ts-a.ts);
-    logs[p.name]=entries;
+// ── LOADING UI ────────────────────────────────────────────────────
+function showLoader(msg='Loading data…'){
+  document.getElementById('loadingOverlay').style.display='flex';
+  document.getElementById('loadingMsg').textContent=msg;
+}
+function hideLoader(){
+  document.getElementById('loadingOverlay').style.display='none';
+}
+function showError(msg){
+  const el=document.getElementById('loadingOverlay');
+  el.style.display='flex';
+  el.innerHTML=`<div style="text-align:center">
+    <div style="font-size:28px;margin-bottom:12px">⚠️</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#ff6b6b;margin-bottom:8px">Failed to load data</div>
+    <div style="font-size:13px;color:var(--muted);max-width:340px;line-height:1.6">${msg}</div>
+    <button onclick="loadFromSheets()" style="margin-top:20px;background:var(--accent);border:none;border-radius:8px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;cursor:pointer">Retry</button>
+  </div>`;
+}
+
+// ── GOOGLE SHEETS FETCH (JSONP) ───────────────────────────────────
+// We load via <script> tag instead of fetch() so it works when the HTML
+// is opened directly from disk (file://), where fetch() is blocked by CORS.
+function fetchSheet(sheet){
+  // sheet = { id, gid }
+  return new Promise((resolve, reject) => {
+    const cbName = `__gvizCb_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
+    const script = document.createElement('script');
+    const cleanup = () => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Request timed out after 20s'));
+    }, 20000);
+
+    window[cbName] = (response) => {
+      clearTimeout(timeout);
+      cleanup();
+      if (response && response.status === 'ok' && response.table) {
+        resolve(response.table);
+      } else {
+        const msg = response?.errors?.[0]?.detailed_message
+                 || response?.errors?.[0]?.message
+                 || 'Sheet returned an error (check sharing & gid)';
+        reject(new Error(msg));
+      }
+    };
+
+    script.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error('Failed to load sheet — check the Sheet ID and that it is shared publicly'));
+    };
+
+    script.src = `https://docs.google.com/spreadsheets/d/${sheet.id}/gviz/tq`
+               + `?tqx=out:json;responseHandler:${cbName}`
+               + `&gid=${encodeURIComponent(sheet.gid)}`;
+    document.head.appendChild(script);
   });
+}
+
+function parseProjects(table){
+  // Columns: Project Name, Pillar, Stage, Progress, AE ID, AE Name, Priority
+  // AE Name (col 5) is the source of truth — AE ID is ignored.
+  return table.rows.map(row=>{
+    const cells=row.c;
+    return {
+      name:     (cells[0]?.v||'').toString().trim(),
+      pillar:   (cells[1]?.v||'').toString().trim(),
+      stage:    (cells[2]?.v||'').toString().trim(),
+      progress: parseInt(cells[3]?.v||0),
+      ae:       (cells[5]?.v||'').toString().trim(),
+      priority: (cells[6]?.v||'Medium').toString().trim(),
+    };
+  }).filter(p=>p.name);
+}
+
+function parseAuditLog(table){
+  // Columns (A-I):
+  //   A  Project Name
+  //   B  Type         (created | stage_change | note | comment | file_added | file_edited)
+  //   C  From Stage   (only for stage_change)
+  //   D  To Stage     (only for stage_change)
+  //   E  Timestamp
+  //   F  Note         (generic body: comment text, change description, etc.)
+  //   G  Author       (who made the change — team member name)
+  //   H  File Name    (for file_added / file_edited)
+  //   I  File URL     (optional link to the file)
+  const logs={};
+  table.rows.forEach(row=>{
+    const cells=row.c;
+    const name=(cells[0]?.v||'').toString().trim();
+    if(!name) return;
+    if(!logs[name]) logs[name]=[];
+
+    // Parse timestamp — Google returns Date objects or strings
+    let ts=Date.now();
+    const tsRaw=cells[4]?.v;
+    if(tsRaw){
+      if(typeof tsRaw==='string' && tsRaw.startsWith('Date(')){
+        const parts=tsRaw.replace('Date(','').replace(')','').split(',').map(Number);
+        ts=new Date(parts[0],parts[1],parts[2],parts[3]||0,parts[4]||0).getTime();
+      } else {
+        ts=new Date(tsRaw).getTime()||Date.now();
+      }
+    }
+
+    logs[name].push({
+      type:      (cells[1]?.v||'note').toString().trim(),
+      fromStage: (cells[2]?.v||'').toString().trim()||null,
+      toStage:   (cells[3]?.v||'').toString().trim()||null,
+      ts,
+      note:      (cells[5]?.v||'').toString().trim()||null,
+      author:    (cells[6]?.v||'').toString().trim()||null,
+      fileName:  (cells[7]?.v||'').toString().trim()||null,
+      fileUrl:   (cells[8]?.v||'').toString().trim()||null,
+    });
+  });
+  // sort each project newest first
+  Object.keys(logs).forEach(k=>logs[k].sort((a,b)=>b.ts-a.ts));
   return logs;
 }
 
-const LS_KEY='aeon_logs_v3';
-let LOGS;
-try{const s=localStorage.getItem(LS_KEY);LOGS=s?JSON.parse(s):seedLogs();}catch{LOGS=seedLogs();}
-localStorage.setItem(LS_KEY,JSON.stringify(LOGS));
+async function loadFromSheets(){
+  showLoader('Connecting to Google Sheets…');
+  try {
+    showLoader('Fetching projects…');
+    const projectTable = await fetchSheet(PROJECTS_SHEET);
+    PROJECTS = parseProjects(projectTable);
+    buildEngineers();
+
+    showLoader('Fetching audit log…');
+    const auditTable = await fetchSheet(AUDIT_SHEET);
+    LOGS = parseAuditLog(auditTable);
+
+    hideLoader();
+    bootDashboard();
+  } catch(err){
+    console.error(err);
+    showError(`Could not reach Google Sheets.<br><br>Make sure both sheets are shared as <strong>"Anyone with the link can view"</strong> and the Sheet IDs / gids are correct.<br><br><small style="opacity:.6">${err.message}</small>`);
+  }
+}
 
 // ── STATE ─────────────────────────────────────────────────────────
 let activePillars = new Set(PILLARS); // all selected by default
@@ -518,7 +661,7 @@ function updateKPIs(){
 function renderTable(){
   document.getElementById('tableCount').textContent=`Showing ${filtered.length} of ${PROJECTS.length} projects`;
   document.getElementById('projectTable').innerHTML=filtered.map(p=>{
-    const ae=ENGINEERS.find(e=>e.id===p.ae);
+    const ae=ENGINEERS.find(e=>e.name===p.ae) || {id:initialsOf(p.ae||'?'),name:p.ae||'Unassigned',color:'#5a5f78'};
     const pc=p.priority==='High'?'#ff6b6b':p.priority==='Medium'?'#ffc857':'#5a5f78';
     const lc=(LOGS[p.name]||[]).length;
     return `<tr onclick="openAudit('${p.name.replace(/'/g,"\\'")}')">
@@ -535,7 +678,7 @@ function renderTable(){
 // ── ENGINEER CARDS ────────────────────────────────────────────────
 function renderEngineerCards(){
   document.getElementById('engineerGrid').innerHTML=ENGINEERS.map(ae=>{
-    const ps=PROJECTS.filter(p=>p.ae===ae.id);
+    const ps=PROJECTS.filter(p=>p.ae===ae.name);
     const avg=Math.round(ps.reduce((s,p)=>s+p.progress,0)/ps.length);
     return `<div class="workload-card">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
@@ -552,7 +695,7 @@ function renderEngineerCards(){
 // ── AUDIT MODAL ───────────────────────────────────────────────────
 function openAudit(name){
   const p=PROJECTS.find(x=>x.name===name);
-  const ae=ENGINEERS.find(e=>e.id===p.ae);
+  const ae=ENGINEERS.find(e=>e.name===p.ae) || {id:initialsOf(p.ae||'?'),name:p.ae||'Unassigned',color:'#5a5f78'};
   const stc=SC[p.stage];
 
   document.getElementById('auditTitle').textContent=p.name;
@@ -588,23 +731,56 @@ function openAudit(name){
   const tl=document.getElementById('auditTimeline');
   if(!logs.length){tl.innerHTML='<div class="audit-empty">No audit entries yet.</div>';}
   else{
+    // Event type metadata (label + colour)
+    const EVENT_META={
+      stage_change: {lbl:'Stage Transition',  color:null /* computed from toStage */ },
+      created:      {lbl:'Project Initialized',color:'#00e5c0'},
+      comment:      {lbl:'Comment Added',      color:'#6c63ff'},
+      file_added:   {lbl:'File Added',         color:'#74b9ff'},
+      file_edited:  {lbl:'File Edited',        color:'#ffc857'},
+      note:         {lbl:'Note',               color:'#6c63ff'},
+    };
+    const safeHtml=(s)=>(s||'').toString().replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+
     tl.innerHTML=logs.map((e,i)=>{
       const isLast=i===logs.length-1;
-      const dc=e.type==='stage_change'?SC[e.toStage]:e.type==='created'?'#00e5c0':'#6c63ff';
-      const lbl=e.type==='stage_change'?'Stage Transition':e.type==='created'?'Project Initialized':'Note';
+      const meta=EVENT_META[e.type]||EVENT_META.note;
+      const dc=e.type==='stage_change'?(SC[e.toStage]||'#6c63ff'):meta.color;
+      const lbl=meta.lbl;
+
+      const authorLine=e.author
+        ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">by <strong style="color:var(--text);font-weight:600">${safeHtml(e.author)}</strong></div>`
+        : '';
+
       let body='';
       if(e.type==='stage_change'){
-        body=`<div class="audit-stage-row">
-          <span class="audit-stag" style="background:${SC[e.fromStage]}22;color:${SC[e.fromStage]};border:1px solid ${SC[e.fromStage]}44">${e.fromStage}</span>
+        body=`${authorLine}<div class="audit-stage-row">
+          <span class="audit-stag" style="background:${SC[e.fromStage]}22;color:${SC[e.fromStage]};border:1px solid ${SC[e.fromStage]}44">${safeHtml(e.fromStage)}</span>
           <span class="audit-arrow">&#8594;</span>
-          <span class="audit-stag" style="background:${SC[e.toStage]}22;color:${SC[e.toStage]};border:1px solid ${SC[e.toStage]}44">${e.toStage}</span>
-        </div>`;
+          <span class="audit-stag" style="background:${SC[e.toStage]}22;color:${SC[e.toStage]};border:1px solid ${SC[e.toStage]}44">${safeHtml(e.toStage)}</span>
+        </div>${e.note?`<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>`:''}`;
       } else if(e.type==='created'){
-        body=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${e.note}</div>
+        body=`${authorLine}<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${safeHtml(e.note||'')}</div>
           <div class="audit-stage-row"><span class="audit-stag" style="background:${SC['Discover']}22;color:${SC['Discover']};border:1px solid ${SC['Discover']}44">Initial stage: Discover</span></div>`;
+      } else if(e.type==='comment'){
+        body=`${authorLine}<div class="audit-note">${safeHtml(e.note||'')}</div>`;
+      } else if(e.type==='file_added' || e.type==='file_edited'){
+        const verb=e.type==='file_added'?'added':'edited';
+        const fileLabel=e.fileName?safeHtml(e.fileName):'Untitled file';
+        const fileLink=e.fileUrl
+          ? `<a href="${safeHtml(e.fileUrl)}" target="_blank" rel="noopener" style="color:${dc};text-decoration:none;border-bottom:1px dashed ${dc}88">${fileLabel}</a>`
+          : fileLabel;
+        body=`${authorLine}<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-left:2px solid ${dc};background:${dc}14;border-radius:0 6px 6px 0">
+          <span style="font-size:18px">&#128206;</span>
+          <div style="font-size:13px;line-height:1.4">
+            <div style="color:var(--text);font-weight:600">${fileLabel}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">File ${verb}${e.fileUrl?' · ':''}${e.fileUrl?`<a href="${safeHtml(e.fileUrl)}" target="_blank" rel="noopener" style="color:${dc}">open</a>`:''}</div>
+          </div>
+        </div>${e.note?`<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>`:''}`;
       } else {
-        body=`<div class="audit-note">${e.note}</div>`;
+        body=`${authorLine}<div class="audit-note">${safeHtml(e.note||'')}</div>`;
       }
+
       return `<div class="audit-entry" style="--dc:${dc}">
         <div class="audit-line">
           <div class="audit-dot${e.type!=='note'?' filled':''}"></div>
@@ -671,7 +847,7 @@ function initCharts(){
 
   charts.ae=new Chart(document.getElementById('chartAE'),{
     type:'bar',
-    data:{labels:ENGINEERS.map(e=>e.name.split(' ')[0]),datasets:[{label:'Projects',data:ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.id).length),backgroundColor:ENGINEERS.map(e=>e.color+'99'),borderColor:ENGINEERS.map(e=>e.color),borderWidth:2,borderRadius:6}]},
+    data:{labels:ENGINEERS.map(e=>e.name.split(' ')[0]),datasets:[{label:'Projects',data:ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.name).length),backgroundColor:ENGINEERS.map(e=>e.color+'99'),borderColor:ENGINEERS.map(e=>e.color),borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1},grid:{color:gridColor()}},x:{grid:{display:false}}}}
   });
 
@@ -739,11 +915,29 @@ function refreshChartColors(){
   }
 }
 
+// ── BOOT ──────────────────────────────────────────────────────────
+function bootDashboard(){
+  // derive unique PILLARS from loaded data
+  const livePillars=[...new Set(PROJECTS.map(p=>p.pillar))].sort();
+  // keep ordering: known pillars first, then any new ones
+  const ordered=PILLARS.filter(p=>livePillars.includes(p)).concat(livePillars.filter(p=>!PILLARS.includes(p)));
+  // re-seed activePillars with live data
+  activePillars=new Set(ordered);
+  filtered=[...PROJECTS];
+
+  renderPillarCheckboxes();
+  renderTable();
+  renderEngineerCards();
+  updateKPIs();
+  if(Object.keys(charts).length) {
+    updateCharts();
+  } else {
+    initCharts();
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────
-renderPillarCheckboxes();
-renderTable();
-renderEngineerCards();
-initCharts();
+loadFromSheets();
 </script>
 </body>
 </html>
