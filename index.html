@@ -1,847 +1,873 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AAEGT AI — Executive Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-/* ── THEME TOKENS ───────────────────────────── */
-:root {
-  --accent:#00e5c0; --accent2:#6c63ff; --accent3:#ff6b6b; --accent4:#ffc857;
-  --pill-hr:#ff6b6b; --pill-ta:#ff9f43; --pill-fin:#00e5c0; --pill-mkt:#6c63ff; --pill-sales:#f9ca24;
-  --tr: background .25s,color .25s,border-color .25s,box-shadow .25s;
-}
-[data-theme="dark"] {
-  --bg:#07080c; --surface:#0e1018; --surface2:#141620; --border:#1e2130;
-  --text:#e8eaf0; --muted:#8892aa; --hbg:rgba(7,8,12,.92); --shadow:0 4px 24px rgba(0,0,0,.4);
-}
-[data-theme="light"] {
-  --bg:#f0f2f7; --surface:#ffffff; --surface2:#f5f7fb; --border:#dde1ed;
-  --text:#0e1018; --muted:#6b7491; --hbg:rgba(240,242,247,.92); --shadow:0 4px 20px rgba(0,0,0,.07);
-}
-
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;line-height:1.65;min-height:100vh;overflow-x:hidden;transition:var(--tr)}
-
-[data-theme="dark"] body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.35}
-
-/* HEADER */
-header{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--hbg);backdrop-filter:blur(16px);z-index:100;transition:var(--tr)}
-.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.5px;color:var(--accent)}
-.logo span{color:var(--text)}
-.header-right{display:flex;align-items:center;gap:20px}
-.header-meta{font-size:12px;color:var(--muted);text-align:right;line-height:2}
-.header-meta strong{color:var(--accent);font-size:13px;letter-spacing:.3px}
-
-.theme-toggle{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:8px 18px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap;transition:all .2s;letter-spacing:.3px}
-.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.t-icon{font-size:15px;line-height:1}
-
-/* LAYOUT */
-main{max-width:1600px;margin:0 auto;padding:40px 48px}
-.section-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;color:var(--muted);margin-bottom:20px;opacity:.9}
-
-/* KPI STRIP */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:48px}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 20px 20px;position:relative;min-width:0;box-shadow:var(--shadow);transition:border-color .25s,var(--tr)}
-.kpi-card:hover{border-color:var(--accent)}
-.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,var(--accent));border-radius:14px 14px 0 0}
-.kpi-label{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.kpi-value{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(32px,3.2vw,56px);color:var(--kpi-color,var(--accent));line-height:1;letter-spacing:-1.5px;white-space:nowrap}
-.kpi-sub{font-size:12px;color:var(--muted);margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
-
-/* FILTERS */
-.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;align-items:center}
-.filter-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-right:4px}
-.filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:100px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.3px;line-height:1}
-.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
-.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
-.filter-divider{width:1px;height:22px;background:var(--border);margin:0 6px}
-
-/* PILLAR CHECKBOX FILTER PANEL */
-.pillar-filter-panel{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:10px;transition:var(--tr)}
-.pillar-filter-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.pillar-filter-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
-.pillar-filter-actions{display:flex;gap:8px}
-.pf-action-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:100px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap}
-.pf-action-btn:hover{border-color:var(--accent);color:var(--accent)}
-.pillar-checkboxes{display:flex;flex-wrap:wrap;gap:10px}
-.pillar-cb-item{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:7px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface);transition:all .2s;font-size:12px;color:var(--muted)}
-.pillar-cb-item:hover{border-color:var(--accent)}
-.pillar-cb-item.checked{border-color:var(--cb-color);background:var(--cb-color-bg);color:var(--cb-color)}
-.pillar-cb-box{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:9px;line-height:1}
-.pillar-cb-item.checked .pillar-cb-box{background:var(--cb-color);border-color:var(--cb-color);color:#000}
-
-/* CHARTS */
-.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px}
-.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:var(--shadow);transition:var(--tr)}
-.chart-card.wide{grid-column:span 2}
-.chart-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px;letter-spacing:-.2px}
-.chart-subtitle{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.5}
-.chart-wrap{position:relative;height:240px}
-.chart-wrap.tall{height:300px}
-/* scrollable progress chart */
-.chart-wrap.scroll{overflow-y:auto;overflow-x:hidden;height:auto;max-height:520px}
-.chart-wrap.scroll::-webkit-scrollbar{width:5px}
-.chart-wrap.scroll::-webkit-scrollbar-track{background:transparent}
-.chart-wrap.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-.chart-wrap.scroll canvas{display:block}
-
-/* TABLE */
-.table-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:40px;box-shadow:var(--shadow);transition:var(--tr)}
-.table-header{padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-table{width:100%;border-collapse:collapse}
-thead th{padding:13px 20px;text-align:left;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2);font-weight:600;position:sticky;top:0;z-index:2}
-.table-scroll{max-height:420px;overflow-y:auto}
-.table-scroll::-webkit-scrollbar{width:5px}
-.table-scroll::-webkit-scrollbar-track{background:transparent}
-.table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-.table-scroll::-webkit-scrollbar-thumb:hover{background:var(--muted)}
-tbody tr{border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer}
-tbody tr:hover{background:var(--surface2)}
-tbody tr:last-child{border-bottom:none}
-tbody td{padding:14px 20px;font-size:13px;vertical-align:middle;line-height:1.4}
-tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text-decoration-color:rgba(0,229,192,.3)}
-
-.pill{display:inline-block;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.4px}
-.pill-hr   {background:rgba(255,107,107,.15);color:var(--pill-hr); border:1px solid rgba(255,107,107,.3)}
-.pill-ta   {background:rgba(255,159,67,.15); color:var(--pill-ta); border:1px solid rgba(255,159,67,.3)}
-.pill-fin  {background:rgba(0,229,192,.15);  color:var(--pill-fin);border:1px solid rgba(0,229,192,.3)}
-.pill-mkt  {background:rgba(108,99,255,.15); color:var(--pill-mkt);border:1px solid rgba(108,99,255,.3)}
-.pill-sales{background:rgba(249,202,36,.15); color:var(--pill-sales);border:1px solid rgba(249,202,36,.3)}
-
-.stage-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text);letter-spacing:.2px}
-.stage-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.progress-bar{width:100%;height:5px;background:var(--border);border-radius:4px;overflow:hidden}
-.progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .5s}
-.ae-tag{font-size:12px;color:var(--text);display:flex;align-items:center;gap:9px}
-.ae-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0}
-
-/* ENGINEER CARDS */
-.workload-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:40px}
-.workload-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow);transition:border-color .2s,var(--tr)}
-.workload-card:hover{border-color:var(--accent)}
-.ae-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px;letter-spacing:-.1px}
-.ae-projects{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5}
-.workload-bar{height:6px;background:var(--border);border-radius:6px;overflow:hidden}
-.workload-fill{height:100%;border-radius:6px;transition:width .5s}
-.workload-pct{font-size:11px;color:var(--muted);margin-top:7px;text-align:right;letter-spacing:.3px}
-
-/* AUDIT MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(7,8,12,.6);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:stretch;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .3s}
-[data-theme="light"] .modal-overlay{background:rgba(14,16,24,.3)}
-.modal-overlay.open{opacity:1;pointer-events:all}
-.modal-panel{width:min(580px,100vw);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(40px);transition:transform .35s cubic-bezier(.22,1,.36,1),var(--tr);overflow:hidden;box-shadow:var(--shadow)}
-.modal-overlay.open .modal-panel{transform:translateX(0)}
-.modal-head{padding:24px 28px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0}
-.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;line-height:1.35;margin-bottom:6px;letter-spacing:-.2px}
-.modal-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-.modal-close{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:34px;height:34px;border-radius:8px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;line-height:1}
-.modal-close:hover{border-color:var(--accent3);color:var(--accent3)}
-.modal-body{flex:1;overflow-y:auto;padding:26px 28px;display:flex;flex-direction:column;gap:24px}
-.modal-body::-webkit-scrollbar{width:4px}
-.modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-
-/* current stage banner */
-.csb{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.csb-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:600}
-.csb-stage{display:inline-flex;align-items:center;gap:11px;font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.3px}
-.csb-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
-.csb-badge{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:5px 12px;letter-spacing:1px;text-transform:uppercase;background:var(--surface);white-space:nowrap;font-weight:500}
-
-/* stage progress track */
-.stage-track{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
-.st-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;font-weight:600}
-.st-steps{display:flex;align-items:flex-start;gap:0}
-.st-step{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;position:relative}
-.st-step:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:2px;background:var(--border);z-index:0}
-.st-step.done:not(:last-child)::after{background:var(--sc);opacity:.5}
-.st-step.active:not(:last-child)::after{background:var(--border)}
-.st-dot{width:20px;height:20px;border-radius:50%;background:var(--border);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;position:relative;z-index:1;transition:all .3s;color:var(--text)}
-.st-step.done  .st-dot{background:var(--sc);border-color:var(--sc);color:#000}
-.st-step.active .st-dot{background:transparent;border-color:var(--sc);box-shadow:0 0 0 3px color-mix(in srgb,var(--sc) 20%,transparent)}
-.st-name{font-size:10px;color:var(--muted);text-align:center;letter-spacing:.3px;line-height:1.3}
-.st-step.done  .st-name{color:var(--sc);opacity:.8}
-.st-step.active .st-name{color:var(--sc);font-weight:600;font-size:10px}
-
-/* audit timeline */
-.audit-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.audit-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600}
-.audit-count{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:4px 13px;font-size:11px;color:var(--muted)}
-.audit-timeline{display:flex;flex-direction:column}
-.audit-entry{display:grid;grid-template-columns:16px 1fr;gap:0 16px;animation:fadeUp .3s ease both}
-.audit-line{display:flex;flex-direction:column;align-items:center}
-.audit-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--dc,var(--accent));background:var(--bg);flex-shrink:0;position:relative;z-index:1;margin-top:3px}
-.audit-dot.filled{background:var(--dc,var(--accent))}
-.audit-connector{width:2px;flex:1;background:var(--border);min-height:16px}
-.audit-content{padding-bottom:22px}
-.audit-type{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;color:var(--dc,var(--accent))}
-.audit-stage-row{display:inline-flex;align-items:center;gap:8px;font-size:13px;margin-bottom:2px}
-.audit-stag{display:inline-block;padding:3px 11px;border-radius:5px;font-size:12px;font-weight:600;letter-spacing:.3px}
-.audit-arrow{color:var(--muted);font-size:15px}
-.audit-ts{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.3px;line-height:1.4}
-.audit-note{font-size:13px;color:var(--muted);font-style:italic;margin-top:6px;padding:10px 14px;border-left:2px solid var(--border);line-height:1.6}
-.audit-empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;line-height:1.6}
-
-/* LOADING OVERLAY */
-#loadingOverlay{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:var(--tr)}
-.loader-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-.loader-text{font-size:13px;color:var(--muted);letter-spacing:.5px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* RESPONSIVE */
-@media(max-width:1100px){
-  .kpi-row{grid-template-columns:repeat(3,1fr)}
-  .charts-grid{grid-template-columns:1fr}
-  .chart-card.wide{grid-column:span 1}
-  .workload-grid{grid-template-columns:repeat(2,1fr)}
-  main{padding:28px 20px} header{padding:18px 20px}
-}
-@media(max-width:700px){
-  .kpi-row{grid-template-columns:repeat(2,1fr)}
-  .workload-grid{grid-template-columns:1fr}
-  .filters{gap:6px}
-  .st-name{display:none}
-}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.kpi-card{animation:fadeUp .4s ease both}
-.kpi-card:nth-child(1){animation-delay:.05s}
-.kpi-card:nth-child(2){animation-delay:.10s}
-.kpi-card:nth-child(3){animation-delay:.15s}
-.kpi-card:nth-child(4){animation-delay:.20s}
-.kpi-card:nth-child(5){animation-delay:.25s}
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo">AAEGT<span>.ai</span></div>
-  <div class="header-right">
-    <button class="theme-toggle" onclick="loadFromSheets()" title="Refresh data from Google Sheets">
-      <span class="t-icon">↻</span>
-      <span>Refresh</span>
-    </button>
-    <button class="theme-toggle" onclick="toggleTheme()">
-      <span class="t-icon" id="themeIcon">🌙</span>
-      <span id="themeLabel">Dark Mode</span>
-    </button>
-    <div class="header-meta">
-      <strong>Executive Portfolio Report</strong><br>
-      Q2 2025 &middot; Generated April 15, 2025
-    </div>
-  </div>
-</header>
-
-<main>
-  <p class="section-label">Portfolio Overview</p>
-  <div class="kpi-row">
-    <div class="kpi-card" style="--kpi-color:#00e5c0">
-      <div class="kpi-label">Total Projects</div>
-      <div class="kpi-value" id="kpiTotal">24</div>
-      <div class="kpi-sub">across 5 pillars</div>
-    </div>
-    <div class="kpi-card" style="--kpi-color:#6c63ff">
-      <div class="kpi-label">In Execution</div>
-      <div class="kpi-value" id="kpiActive">9</div>
-      <div class="kpi-sub">live automations</div>
-    </div>
-    <div class="kpi-card" style="--kpi-color:#55efc4">
-      <div class="kpi-label">Completed</div>
-      <div class="kpi-value" id="kpiDone">7</div>
-      <div class="kpi-sub">monitored &amp; stable</div>
-    </div>
-    <div class="kpi-card" style="--kpi-color:#ffc857">
-      <div class="kpi-label">Avg. Progress</div>
-      <div class="kpi-value" id="kpiAvg">63%</div>
-      <div class="kpi-sub">portfolio completion</div>
-    </div>
-    <div class="kpi-card" style="--kpi-color:#ff6b6b">
-      <div class="kpi-label">Engineers</div>
-      <div class="kpi-value">8</div>
-      <div class="kpi-sub">automation engineers</div>
-    </div>
-  </div>
-
-  <div class="pillar-filter-panel">
-    <div class="pillar-filter-top">
-      <span class="pillar-filter-title">Filter by Pillar</span>
-      <div class="pillar-filter-actions">
-        <button class="pf-action-btn" onclick="selectAllPillars()">Select All</button>
-        <button class="pf-action-btn" onclick="clearAllPillars()">Clear All</button>
-      </div>
-    </div>
-    <div class="pillar-checkboxes" id="pillarCheckboxes"></div>
-  </div>
-
-  <div class="filters">
-    <span class="filter-label">Stage</span>
-    <button class="filter-btn active" onclick="filterData('all','stage',this)">All</button>
-    <button class="filter-btn" onclick="filterData('Discover','stage',this)">Discover</button>
-    <button class="filter-btn" onclick="filterData('Design','stage',this)">Design</button>
-    <button class="filter-btn" onclick="filterData('Build','stage',this)">Build</button>
-    <button class="filter-btn" onclick="filterData('Test','stage',this)">Test</button>
-    <button class="filter-btn" onclick="filterData('Deploy','stage',this)">Deploy</button>
-    <button class="filter-btn" onclick="filterData('Execute','stage',this)">Execute</button>
-    <button class="filter-btn" onclick="filterData('Monitor','stage',this)">Monitor</button>
-  </div>
-
-  <div class="charts-grid">
-    <div class="chart-card">
-      <div class="chart-title">Projects by Pillar</div>
-      <div class="chart-subtitle">Distribution across all departments</div>
-      <div class="chart-wrap"><canvas id="chartPillar"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Lifecycle Stage Distribution</div>
-      <div class="chart-subtitle">All projects by development phase</div>
-      <div class="chart-wrap"><canvas id="chartStage"></canvas></div>
-    </div>
-  </div>
-
-  <p class="section-label">Project Registry</p>
-  <div class="table-card">
-    <div class="table-header">
-      <div>
-        <div class="chart-title">All Projects</div>
-        <div class="chart-subtitle" id="tableCount">Showing 24 of 24 projects</div>
-      </div>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Project</th><th>Pillar</th><th>Stage</th><th>Progress</th><th>Automation Engineer</th><th>Priority</th>
-        </tr>
-      </thead>
-      <tbody id="projectTable"></tbody>
-    </table>
-    </div>
-  </div>
-
-  <div class="charts-grid" style="margin-bottom:40px">
-    <div class="chart-card">
-      <div class="chart-title">Engineer Workload</div>
-      <div class="chart-subtitle">Active project count per AE</div>
-      <div class="chart-wrap"><canvas id="chartAE"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Stage Burndown &middot; Per Pillar</div>
-      <div class="chart-subtitle">How far each pillar has progressed</div>
-      <div class="chart-wrap"><canvas id="chartBurndown"></canvas></div>
-    </div>
-  </div>
-
-  <p class="section-label">Progress by Project &middot; Filtered View</p>
-  <div class="chart-card" style="margin-bottom:40px">
-    <div class="chart-title">Completion % per active project</div>
-    <div class="chart-subtitle">Each bar represents one project's current progress</div>
-    <div class="chart-wrap scroll" id="progressWrap"><canvas id="chartProgress"></canvas></div>
-  </div>
-
-  <p class="section-label">Automation Engineers</p>
-  <div class="workload-grid" id="engineerGrid"></div>
-</main>
-
-<div id="loadingOverlay">
-  <div class="loader-spinner"></div>
-  <div class="loader-text" id="loadingMsg">Connecting to Google Sheets…</div>
-</div>
-
-<div class="modal-overlay" id="auditOverlay" onclick="handleOverlayClick(event)">
-  <div class="modal-panel">
-    <div class="modal-head">
-      <div style="flex:1;min-width:0">
-        <div class="modal-title" id="auditTitle"></div>
-        <div class="modal-meta" id="auditMeta"></div>
-      </div>
-      <button class="modal-close" onclick="closeAudit()">&#10005;</button>
-    </div>
-    <div class="modal-body">
-      <div class="csb" id="csbBanner"></div>
-      <div class="stage-track">
-        <div class="st-label">Lifecycle Progress</div>
-        <div class="st-steps" id="stageTrack"></div>
-      </div>
-      <div>
-        <div class="audit-head">
-          <div class="audit-section-label">Audit Log</div>
-          <span class="audit-count" id="auditCount">0 entries</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AAEGT AI — Executive Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --accent: #00e5c0;
+        --accent2: #6c63ff;
+        --accent3: #ff6b6b;
+        --accent4: #ffc857;
+        --pill-hr: #ff6b6b;
+        --pill-ta: #ff9f43;
+        --pill-fin: #00e5c0;
+        --pill-mkt: #6c63ff;
+        --pill-sales: #f9ca24;
+        --tr: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+      }
+      [data-theme="dark"] {
+        --bg: #07080c; --surface: #0e1018; --surface2: #141620; --border: #1e2130;
+        --text: #e8eaf0; --muted: #8892aa; --hbg: rgba(7,8,12,0.92); --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      }
+      [data-theme="light"] {
+        --bg: #f0f2f7; --surface: #ffffff; --surface2: #f5f7fb; --border: #dde1ed;
+        --text: #0e1018; --muted: #6b7491; --hbg: rgba(240,242,247,0.92); --shadow: 0 4px 20px rgba(0,0,0,0.07);
+      }
+      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+      body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;line-height:1.65;min-height:100vh;overflow-x:hidden;transition:var(--tr)}
+      [data-theme="dark"] body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.35}
+      header{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--hbg);backdrop-filter:blur(16px);z-index:100;transition:var(--tr)}
+      .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.5px;color:var(--accent)}
+      .logo span{color:var(--text)}
+      .header-right{display:flex;align-items:center;gap:20px}
+      .header-meta{font-size:12px;color:var(--muted);text-align:right;line-height:2}
+      .header-meta strong{color:var(--accent);font-size:13px;letter-spacing:.3px}
+      .theme-toggle{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:8px 18px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap;transition:all .2s;letter-spacing:.3px}
+      .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+      .t-icon{font-size:15px;line-height:1}
+      main{max-width:1600px;margin:0 auto;padding:40px 48px}
+      .section-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;color:var(--muted);margin-bottom:20px;opacity:.9}
+      #progressWrap{cursor:pointer}
+      .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:48px}
+      .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 20px 20px;position:relative;min-width:0;box-shadow:var(--shadow);transition:border-color .25s,var(--tr)}
+      .kpi-card:hover{border-color:var(--accent)}
+      .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,var(--accent));border-radius:14px 14px 0 0}
+      .kpi-label{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+      .kpi-value{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(32px,3.2vw,56px);color:var(--kpi-color,var(--accent));line-height:1;letter-spacing:-1.5px;white-space:nowrap}
+      .kpi-sub{font-size:12px;color:var(--muted);margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+      .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;align-items:center}
+      .filter-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-right:4px}
+      .filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:100px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.3px;line-height:1}
+      .filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+      .filter-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+      .filter-divider{width:1px;height:22px;background:var(--border);margin:0 6px}
+      .pillar-filter-panel{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:10px;transition:var(--tr)}
+      .pillar-filter-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+      .pillar-filter-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+      .pillar-filter-actions{display:flex;gap:8px}
+      .pf-action-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:100px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap}
+      .pf-action-btn:hover{border-color:var(--accent);color:var(--accent)}
+      .pillar-checkboxes{display:flex;flex-wrap:wrap;gap:10px}
+      .pillar-cb-item{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:7px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface);transition:all .2s;font-size:12px;color:var(--muted)}
+      .pillar-cb-item:hover{border-color:var(--accent)}
+      .pillar-cb-item.checked{border-color:var(--cb-color);background:var(--cb-color-bg);color:var(--cb-color)}
+      .pillar-cb-box{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:9px;line-height:1}
+      .pillar-cb-item.checked .pillar-cb-box{background:var(--cb-color);border-color:var(--cb-color);color:#000}
+      .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:40px}
+      .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:var(--shadow);transition:var(--tr)}
+      .chart-card.wide{grid-column:span 2}
+      .chart-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px;letter-spacing:-.2px}
+      .chart-subtitle{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+      .chart-wrap{position:relative;height:240px}
+      .chart-wrap.tall{height:300px}
+      .chart-wrap.scroll{overflow-y:auto;overflow-x:hidden;height:auto;max-height:520px}
+      .chart-wrap.scroll::-webkit-scrollbar{width:5px}
+      .chart-wrap.scroll::-webkit-scrollbar-track{background:transparent}
+      .chart-wrap.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+      .chart-wrap.scroll canvas{display:block}
+      .table-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:40px;box-shadow:var(--shadow);transition:var(--tr)}
+      .table-header{padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+      table{width:100%;border-collapse:collapse}
+      thead th{padding:13px 20px;text-align:left;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2);font-weight:600;position:sticky;top:0;z-index:2}
+      .table-scroll{max-height:420px;overflow-y:auto}
+      .table-scroll::-webkit-scrollbar{width:5px}
+      .table-scroll::-webkit-scrollbar-track{background:transparent}
+      .table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+      .table-scroll::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+      tbody tr{border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer}
+      tbody tr:hover{background:var(--surface2)}
+      tbody tr:last-child{border-bottom:none}
+      tbody td{padding:14px 20px;font-size:13px;vertical-align:middle;line-height:1.4}
+      tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text-decoration-color:rgba(0,229,192,.3)}
+      .pill{display:inline-block;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.4px}
+      .pill-hr{background:rgba(255,107,107,.15);color:var(--pill-hr);border:1px solid rgba(255,107,107,.3)}
+      .pill-ta{background:rgba(255,159,67,.15);color:var(--pill-ta);border:1px solid rgba(255,159,67,.3)}
+      .pill-fin{background:rgba(0,229,192,.15);color:var(--pill-fin);border:1px solid rgba(0,229,192,.3)}
+      .pill-mkt{background:rgba(108,99,255,.15);color:var(--pill-mkt);border:1px solid rgba(108,99,255,.3)}
+      .pill-sales{background:rgba(249,202,36,.15);color:var(--pill-sales);border:1px solid rgba(249,202,36,.3)}
+      .stage-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text);letter-spacing:.2px}
+      .stage-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+      .progress-bar{width:100%;height:5px;background:var(--border);border-radius:4px;overflow:hidden}
+      .progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .5s}
+      .ae-tag{font-size:12px;color:var(--text);display:flex;align-items:center;gap:9px}
+      .ae-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0}
+      .workload-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:40px}
+      .workload-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow);transition:border-color .2s,var(--tr)}
+      .workload-card:hover{border-color:var(--accent)}
+      .ae-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px;letter-spacing:-.1px}
+      .ae-projects{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+      .workload-bar{height:6px;background:var(--border);border-radius:6px;overflow:hidden}
+      .workload-fill{height:100%;border-radius:6px;transition:width .5s}
+      .workload-pct{font-size:11px;color:var(--muted);margin-top:7px;text-align:right;letter-spacing:.3px}
+      .modal-overlay{position:fixed;inset:0;background:rgba(7,8,12,.6);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:stretch;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .3s}
+      [data-theme="light"] .modal-overlay{background:rgba(14,16,24,.3)}
+      .modal-overlay.open{opacity:1;pointer-events:all}
+      .modal-panel{width:min(580px,100vw);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(40px);transition:transform .35s cubic-bezier(.22,1,.36,1),var(--tr);overflow:hidden;box-shadow:var(--shadow)}
+      .modal-overlay.open .modal-panel{transform:translateX(0)}
+      .modal-head{padding:24px 28px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0}
+      .modal-title{font-family:'Inter','Syne',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:800;font-size:clamp(18px,2.1vw,28px);line-height:1.15;margin-bottom:6px;letter-spacing:-.6px;word-break:break-word;overflow-wrap:anywhere}
+      .modal-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+      .modal-close{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:34px;height:34px;border-radius:8px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;line-height:1}
+      .modal-close:hover{border-color:var(--accent3);color:var(--accent3)}
+      .modal-body{flex:1;overflow-y:auto;padding:26px 28px;display:flex;flex-direction:column;gap:24px}
+      .modal-body::-webkit-scrollbar{width:4px}
+      .modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+      .csb{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+      .csb-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:600}
+      .csb-stage{display:inline-flex;align-items:center;gap:11px;font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.3px}
+      .csb-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+      .stage-track{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
+      .st-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;font-weight:600}
+      .st-steps{display:flex;align-items:flex-start;gap:0}
+      .st-step{display:flex;flex-direction:column;align-items:center;gap:7px;flex:1;position:relative}
+      .st-step:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:2px;background:var(--border);z-index:0}
+      .st-step.done:not(:last-child)::after{background:var(--sc);opacity:.5}
+      .st-step.active:not(:last-child)::after{background:var(--border)}
+      .st-dot{width:20px;height:20px;border-radius:50%;background:var(--border);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;position:relative;z-index:1;transition:all .3s;color:var(--text)}
+      .st-step.done .st-dot{background:var(--sc);border-color:var(--sc);color:#000}
+      .st-step.active .st-dot{background:transparent;border-color:var(--sc);box-shadow:0 0 0 3px color-mix(in srgb,var(--sc) 20%,transparent)}
+      .st-name{font-size:10px;color:var(--muted);text-align:center;letter-spacing:.3px;line-height:1.3}
+      .st-step.done .st-name{color:var(--sc);opacity:.8}
+      .st-step.active .st-name{color:var(--sc);font-weight:600;font-size:10px}
+      .audit-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+      .audit-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600}
+      .audit-count{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:4px 13px;font-size:11px;color:var(--muted)}
+      .audit-timeline{display:flex;flex-direction:column}
+      .audit-entry{display:grid;grid-template-columns:16px 1fr;gap:0 16px;animation:fadeUp .3s ease both}
+      .audit-line{display:flex;flex-direction:column;align-items:center}
+      .audit-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--dc,var(--accent));background:var(--bg);flex-shrink:0;position:relative;z-index:1;margin-top:3px}
+      .audit-dot.filled{background:var(--dc,var(--accent))}
+      .audit-connector{width:2px;flex:1;background:var(--border);min-height:16px}
+      .audit-content{padding-bottom:22px}
+      .audit-type{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;color:var(--dc,var(--accent))}
+      .audit-stage-row{display:inline-flex;align-items:center;gap:8px;font-size:13px;margin-bottom:2px}
+      .audit-stag{display:inline-block;padding:3px 11px;border-radius:5px;font-size:12px;font-weight:600;letter-spacing:.3px}
+      .audit-arrow{color:var(--muted);font-size:15px}
+      .audit-ts{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.3px;line-height:1.4}
+      .audit-note{font-size:13px;color:var(--muted);font-style:italic;margin-top:6px;padding:10px 14px;border-left:2px solid var(--border);line-height:1.6}
+      .audit-empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;line-height:1.6}
+      #loadingOverlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:var(--tr)}
+      .loader-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+      .loader-text{font-size:13px;color:var(--muted);letter-spacing:.5px}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.charts-grid{grid-template-columns:1fr}.chart-card.wide{grid-column:span 1}.workload-grid{grid-template-columns:repeat(2,1fr)}main{padding:28px 20px}header{padding:18px 20px}}
+      @media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}.workload-grid{grid-template-columns:1fr}.filters{gap:6px}.st-name{display:none}}
+      @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+      .kpi-card{animation:fadeUp .4s ease both}
+      .kpi-card:nth-child(1){animation-delay:.05s}.kpi-card:nth-child(2){animation-delay:.1s}.kpi-card:nth-child(3){animation-delay:.15s}.kpi-card:nth-child(4){animation-delay:.2s}.kpi-card:nth-child(5){animation-delay:.25s}
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">AAEGT<span>.ai</span></div>
+      <div class="header-right">
+        <button class="theme-toggle" onclick="loadFromSheets()" title="Refresh data from Google Sheets">
+          <span class="t-icon">↻</span>
+          <span>Refresh</span>
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme()">
+          <span class="t-icon" id="themeIcon">🌙</span>
+          <span id="themeLabel">Dark Mode</span>
+        </button>
+        <div class="header-meta">
+          <strong>Executive Portfolio Report</strong><br />
+          Q2 2025 &middot; Generated April 15, 2025
         </div>
-        <div class="audit-timeline" id="auditTimeline"></div>
+      </div>
+    </header>
+
+    <main>
+      <p class="section-label">Portfolio Overview</p>
+      <div class="kpi-row">
+        <div class="kpi-card" style="--kpi-color:#00e5c0">
+          <div class="kpi-label">Total Projects</div>
+          <div class="kpi-value" id="kpiTotal">—</div>
+          <div class="kpi-sub" id="kpiTotalSub">loading…</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#6c63ff">
+          <div class="kpi-label">In Execution</div>
+          <div class="kpi-value" id="kpiActive">—</div>
+          <div class="kpi-sub">live automations</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#55efc4">
+          <div class="kpi-label">Completed</div>
+          <div class="kpi-value" id="kpiDone">—</div>
+          <div class="kpi-sub">monitored &amp; stable</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#ffc857">
+          <div class="kpi-label">Avg. Progress</div>
+          <div class="kpi-value" id="kpiAvg">—</div>
+          <div class="kpi-sub">portfolio completion</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#ff6b6b">
+          <div class="kpi-label">Engineers</div>
+          <div class="kpi-value" id="kpiEng">—</div>
+          <div class="kpi-sub">automation engineers</div>
+        </div>
+      </div>
+
+      <div class="pillar-filter-panel">
+        <div class="pillar-filter-top">
+          <span class="pillar-filter-title">Filter by Pillar</span>
+          <div class="pillar-filter-actions">
+            <button class="pf-action-btn" onclick="selectAllPillars()">Select All</button>
+            <button class="pf-action-btn" onclick="clearAllPillars()">Clear All</button>
+          </div>
+        </div>
+        <div class="pillar-checkboxes" id="pillarCheckboxes"></div>
+      </div>
+
+      <div class="filters">
+        <span class="filter-label">Stage</span>
+        <button class="filter-btn active" onclick="filterData('all','stage',this)">All</button>
+        <button class="filter-btn" onclick="filterData('Discover','stage',this)">Discover</button>
+        <button class="filter-btn" onclick="filterData('Design','stage',this)">Design</button>
+        <button class="filter-btn" onclick="filterData('Build','stage',this)">Build</button>
+        <button class="filter-btn" onclick="filterData('Test','stage',this)">Test</button>
+        <button class="filter-btn" onclick="filterData('Deploy','stage',this)">Deploy</button>
+        <button class="filter-btn" onclick="filterData('Execute','stage',this)">Execute</button>
+        <button class="filter-btn" onclick="filterData('Monitor','stage',this)">Monitor</button>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Projects by Pillar</div>
+          <div class="chart-subtitle">Distribution across all departments</div>
+          <div class="chart-wrap"><canvas id="chartPillar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Lifecycle Stage Distribution</div>
+          <div class="chart-subtitle">All projects by development phase</div>
+          <div class="chart-wrap"><canvas id="chartStage"></canvas></div>
+        </div>
+      </div>
+
+      <p class="section-label">Project Registry</p>
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <div class="chart-title">All Projects</div>
+            <div class="chart-subtitle" id="tableCount">Loading…</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th><th>Pillar</th><th>Stage</th>
+                <th>Progress</th><th>Automation Engineer</th><th>Priority</th>
+              </tr>
+            </thead>
+            <tbody id="projectTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts-grid" style="margin-bottom:40px">
+        <div class="chart-card">
+          <div class="chart-title">Engineer Workload</div>
+          <div class="chart-subtitle">Active project count per AE</div>
+          <div class="chart-wrap"><canvas id="chartAE"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Stage Burndown &middot; Per Pillar</div>
+          <div class="chart-subtitle">How far each pillar has progressed</div>
+          <div class="chart-wrap"><canvas id="chartBurndown"></canvas></div>
+        </div>
+      </div>
+
+      <p class="section-label">Progress by Project &middot; Filtered View</p>
+      <div class="chart-card" style="margin-bottom:40px">
+        <div class="chart-title">Completion % per active project</div>
+        <div class="chart-subtitle">Click any bar to view its audit log</div>
+        <div class="chart-wrap scroll" id="progressWrap">
+          <canvas id="chartProgress"></canvas>
+        </div>
+      </div>
+
+      <p class="section-label">Automation Engineers</p>
+      <div class="workload-grid" id="engineerGrid"></div>
+    </main>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay">
+      <div class="loader-spinner"></div>
+      <div class="loader-text" id="loadingMsg">Connecting to Google Sheets…</div>
+    </div>
+
+    <!-- AUDIT MODAL -->
+    <div class="modal-overlay" id="auditOverlay" onclick="handleOverlayClick(event)">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <div style="flex:1;min-width:0">
+            <div class="modal-title" id="auditTitle"></div>
+            <div class="modal-meta" id="auditMeta"></div>
+          </div>
+          <button class="modal-close" onclick="closeAudit()">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="csb" id="csbBanner"></div>
+          <div class="stage-track">
+            <div class="st-label">Lifecycle Progress</div>
+            <div class="st-steps" id="stageTrack"></div>
+          </div>
+          <div>
+            <div class="audit-head">
+              <div class="audit-section-label">Audit Log</div>
+              <span class="audit-count" id="auditCount">0 entries</span>
+            </div>
+            <div class="audit-timeline" id="auditTimeline"></div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<script>
-// ── GOOGLE SHEETS CONFIG ──────────────────────────────────────────
-const PROJECTS_SHEET = {
-  id:  '1b1wca9-GTm5UlKkC-biu348Md_kiVbhjC2QA-Wfsgy4',
-  gid: '137827075'
-};
-const AUDIT_SHEET = {
-  id:  '1udxbCynCaGQ9hNR6oGyOb56cozY6wP6JKZbqJLfZUEY',
-  gid: '1295996016'
-};
+    <script>
+      // ── SHEET CONFIG ─────────────────────────────────────────────────
+      // Both sheets live in the same Google Spreadsheet file.
+      // Projects tab  → gid 137827075
+      // Audit Log tab → gid 1585120079
+      const SHEET_ID = '1b1wca9-GTm5UlKkC-biu348Md_kiVbhjC2QA-Wfsgy4';
+      const PROJECTS_SHEET = { id: SHEET_ID, gid: '137827075'   };
+      const AUDIT_SHEET    = { id: SHEET_ID, gid: '1585120079'  };
 
-// ── CONSTANTS ─────────────────────────────────────────────────────
-const ENGINEER_PALETTE = ['#00e5c0','#6c63ff','#ff6b6b','#ffc857','#74b9ff','#ff9f43','#a29bfe','#55efc4','#fd79a8','#00b894','#fab1a0','#81ecec'];
-let ENGINEERS = []; 
+      // ── CONSTANTS ─────────────────────────────────────────────────────
+      const ENGINEER_PALETTE = [
+        '#00e5c0','#6c63ff','#ff6b6b','#ffc857','#74b9ff',
+        '#ff9f43','#a29bfe','#55efc4','#fd79a8','#00b894','#fab1a0','#81ecec',
+      ];
+      let ENGINEERS = [];
 
-function initialsOf(name){
-  const parts=name.trim().split(/\s+/).filter(Boolean);
-  if(!parts.length) return '?';
-  if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
-  return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
-}
-
-function buildEngineers(){
-  const seen=new Set();
-  const names=[];
-  PROJECTS.forEach(p=>{
-    if(p.ae && !seen.has(p.ae)){ seen.add(p.ae); names.push(p.ae); }
-  });
-  ENGINEERS = names.map((name,i)=>({
-    id:    initialsOf(name),
-    name:  name,
-    color: ENGINEER_PALETTE[i % ENGINEER_PALETTE.length]
-  }));
-}
-const STAGES=['Discover','Design','Build','Test','Deploy','Execute','Monitor'];
-const SC={Discover:'#ff6b9d',Design:'#a29bfe',Build:'#74b9ff',Test:'#00cec9',Deploy:'#55efc4',Execute:'#fdcb6e',Monitor:'#e17055'};
-const PILLARS=['HR','Talent Acquisition','Finance','Marketing','Sales'];
-const PC={'HR':'#ff6b6b','Talent Acquisition':'#ff9f43','Finance':'#00e5c0','Marketing':'#6c63ff','Sales':'#ffc857'};
-const PCLS={'HR':'pill-hr','Talent Acquisition':'pill-ta','Finance':'pill-fin','Marketing':'pill-mkt','Sales':'pill-sales'};
-
-// ── LIVE DATA STATE ───────────────────────────────────────────────
-let PROJECTS = [];
-let LOGS     = {};
-
-// ── LOADING UI ────────────────────────────────────────────────────
-function showLoader(msg='Loading data…'){
-  document.getElementById('loadingOverlay').style.display='flex';
-  document.getElementById('loadingMsg').textContent=msg;
-}
-function hideLoader(){
-  document.getElementById('loadingOverlay').style.display='none';
-}
-function showError(msg){
-  const el=document.getElementById('loadingOverlay');
-  el.style.display='flex';
-  el.innerHTML=`<div style="text-align:center">
-    <div style="font-size:28px;margin-bottom:12px">⚠️</div>
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#ff6b6b;margin-bottom:8px">Failed to load data</div>
-    <div style="font-size:13px;color:var(--muted);max-width:340px;line-height:1.6">${msg}</div>
-    <button onclick="loadFromSheets()" style="margin-top:20px;background:var(--accent);border:none;border-radius:8px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;cursor:pointer">Retry</button>
-  </div>`;
-}
-
-// ── GOOGLE SHEETS FETCH (JSONP) ───────────────────────────────────
-function fetchSheet(sheet){
-  return new Promise((resolve, reject) => {
-    const cbName = `__gvizCb_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
-    const script = document.createElement('script');
-    const cleanup = () => {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('Request timed out after 20s'));
-    }, 20000);
-
-    window[cbName] = (response) => {
-      clearTimeout(timeout);
-      cleanup();
-      if (response && response.status === 'ok' && response.table) {
-        resolve(response.table);
-      } else {
-        const msg = response?.errors?.[0]?.detailed_message
-                 || response?.errors?.[0]?.message
-                 || 'Sheet returned an error (check sharing & gid)';
-        reject(new Error(msg));
-      }
-    };
-
-    script.onerror = () => {
-      clearTimeout(timeout);
-      cleanup();
-      reject(new Error('Failed to load sheet — check the Sheet ID and that it is shared publicly'));
-    };
-
-    script.src = `https://docs.google.com/spreadsheets/d/${sheet.id}/gviz/tq`
-               + `?tqx=out:json;responseHandler:${cbName}`
-               + `&gid=${encodeURIComponent(sheet.gid)}`;
-    document.head.appendChild(script);
-  });
-}
-
-function parseProjects(table){
-  return table.rows.map(row=>{
-    const cells=row.c;
-    return {
-      name:      (cells[0]?.v||'').toString().trim(),
-      pillar:    (cells[1]?.v||'').toString().trim(),
-      stage:     (cells[2]?.v||'').toString().trim(),
-      progress: parseInt(cells[3]?.v||0),
-      ae:        (cells[5]?.v||'').toString().trim(),
-      priority: (cells[6]?.v||'Medium').toString().trim(),
-    };
-  }).filter(p=>p.name);
-}
-
-function parseAuditLog(table){
-  const logs={};
-  table.rows.forEach(row=>{
-    const cells=row.c;
-    const name=(cells[0]?.v||'').toString().trim();
-    if(!name) return;
-    if(!logs[name]) logs[name]=[];
-
-    let ts=Date.now();
-    const tsRaw=cells[4]?.v;
-    if(tsRaw){
-      if(typeof tsRaw==='string' && tsRaw.startsWith('Date(')){
-        const parts=tsRaw.replace('Date(','').replace(')','').split(',').map(Number);
-        ts=new Date(parts[0],parts[1],parts[2],parts[3]||0,parts[4]||0).getTime();
-      } else {
-        ts=new Date(tsRaw).getTime()||Date.now();
-      }
-    }
-
-    logs[name].push({
-      type:      (cells[1]?.v||'note').toString().trim(),
-      fromStage: (cells[2]?.v||'').toString().trim()||null,
-      toStage:   (cells[3]?.v||'').toString().trim()||null,
-      ts,
-      note:      (cells[5]?.v||'').toString().trim()||null,
-      author:    (cells[6]?.v||'').toString().trim()||null,
-      fileName:  (cells[7]?.v||'').toString().trim()||null,
-      fileUrl:   (cells[8]?.v||'').toString().trim()||null,
-    });
-  });
-  Object.keys(logs).forEach(k=>logs[k].sort((a,b)=>b.ts-a.ts));
-  return logs;
-}
-
-async function loadFromSheets(){
-  showLoader('Connecting to Google Sheets…');
-  try {
-    showLoader('Fetching projects…');
-    const projectTable = await fetchSheet(PROJECTS_SHEET);
-    PROJECTS = parseProjects(projectTable);
-    buildEngineers();
-
-    showLoader('Fetching audit log…');
-    const auditTable = await fetchSheet(AUDIT_SHEET);
-    LOGS = parseAuditLog(auditTable);
-
-    hideLoader();
-    bootDashboard();
-  } catch(err){
-    console.error(err);
-    showError(`Could not reach Google Sheets.<br><br>Make sure both sheets are shared correctly.<br><br><small style="opacity:.6">${err.message}</small>`);
-  }
-}
-
-// ── STATE ─────────────────────────────────────────────────────────
-let activePillars = new Set(PILLARS); 
-let activeStage   = 'all';
-let filtered      = [...PROJECTS];
-
-// ── THEME (UPDATED FOR LIGHT DEFAULT) ─────────────────────────────
-function toggleTheme(){
-  const html = document.documentElement;
-  const isCurrentlyLight = html.getAttribute('data-theme') === 'light';
-  
-  const newTheme = isCurrentlyLight ? 'dark' : 'light';
-  html.setAttribute('data-theme', newTheme);
-  
-  // Update button text and icon
-  // If the new mode is DARK, the button should offer to switch back to LIGHT
-  document.getElementById('themeIcon').textContent = (newTheme === 'dark') ? '☀️' : '🌙';
-  document.getElementById('themeLabel').textContent = (newTheme === 'dark') ? 'Light Mode' : 'Dark Mode';
-  
-  refreshChartColors();
-}
-
-// ── HELPERS ───────────────────────────────────────────────────────
-function fmtDate(ts){
-  const d=new Date(ts);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-}
-function gridColor(){return document.documentElement.getAttribute('data-theme')==='dark'?'#1e2130':'#dde1ed';}
-function textColor(){return document.documentElement.getAttribute('data-theme')==='dark'?'#8892aa':'#6b7491';}
-
-// ── PILLAR CHECKBOX PANEL ─────────────────────────────────────────
-function renderPillarCheckboxes(){
-  const container=document.getElementById('pillarCheckboxes');
-  container.innerHTML=PILLARS.map(p=>{
-    const color=PC[p];
-    const checked=activePillars.has(p);
-    return `<div class="pillar-cb-item${checked?' checked':''}"
-      style="--cb-color:${color};--cb-color-bg:${color}18"
-      onclick="togglePillar('${p}')">
-      <div class="pillar-cb-box">${checked?'&#10003;':''}</div>
-      <span>${p}</span>
-    </div>`;
-  }).join('');
-}
-
-function togglePillar(pillar){
-  if(activePillars.has(pillar)) activePillars.delete(pillar);
-  else activePillars.add(pillar);
-  renderPillarCheckboxes();
-  applyFilters();
-}
-
-function selectAllPillars(){
-  activePillars=new Set(PILLARS);
-  renderPillarCheckboxes();
-  applyFilters();
-}
-
-function clearAllPillars(){
-  activePillars=new Set();
-  renderPillarCheckboxes();
-  applyFilters();
-}
-
-// ── STAGE FILTER ──────────────────────────────────────────────────
-function filterData(v,type,btn){
-  document.querySelectorAll('.filter-btn').forEach(b=>{if((b.getAttribute('onclick')||'').includes(`'${type}'`))b.classList.remove('active');});
-  btn.classList.add('active');
-  activeStage=v;
-  applyFilters();
-}
-
-function applyFilters(){
-  filtered=PROJECTS.filter(p=>{
-    const pillarOk = activePillars.size===0 ? false : activePillars.has(p.pillar);
-    const stageOk  = activeStage==='all' || p.stage===activeStage;
-    return pillarOk && stageOk;
-  });
-  renderTable(); updateKPIs(); updateCharts();
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────
-function updateKPIs(){
-  const t=filtered.length,a=filtered.filter(p=>p.stage==='Execute').length,d=filtered.filter(p=>p.stage==='Monitor').length;
-  const avg=t?Math.round(filtered.reduce((s,p)=>s+p.progress,0)/t):0;
-  document.getElementById('kpiTotal').textContent=t;
-  document.getElementById('kpiActive').textContent=a;
-  document.getElementById('kpiDone').textContent=d;
-  document.getElementById('kpiAvg').textContent=avg+'%';
-}
-
-// ── TABLE ─────────────────────────────────────────────────────────
-function renderTable(){
-  document.getElementById('tableCount').textContent=`Showing ${filtered.length} of ${PROJECTS.length} projects`;
-  document.getElementById('projectTable').innerHTML=filtered.map(p=>{
-    const ae=ENGINEERS.find(e=>e.name===p.ae) || {id:initialsOf(p.ae||'?'),name:p.ae||'Unassigned',color:'#5a5f78'};
-    const pc=p.priority==='High'?'#ff6b6b':p.priority==='Medium'?'#ffc857':'#5a5f78';
-    const lc=(LOGS[p.name]||[]).length;
-    return `<tr onclick="openAudit('${p.name.replace(/'/g,"\\'")}')">
-      <td style="font-family:'Syne',sans-serif;font-weight:600;font-size:14px">${p.name}<span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-left:10px;font-weight:400;opacity:.8">${lc} log${lc!==1?'s':''}</span></td>
-      <td><span class="pill ${PCLS[p.pillar]}">${p.pillar}</span></td>
-      <td><span class="stage-badge"><span class="stage-dot" style="background:${SC[p.stage]}"></span>${p.stage}</span></td>
-      <td style="min-width:140px"><div style="display:flex;align-items:center;gap:10px"><div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${p.progress}%;background:${SC[p.stage]}"></div></div><span style="font-size:12px;color:var(--muted);width:36px;text-align:right">${p.progress}%</span></div></td>
-      <td><div class="ae-tag"><div class="ae-avatar" style="background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div>${ae.name}</div></td>
-      <td><span style="color:${pc};font-size:12px;letter-spacing:.3px">&#9679; ${p.priority}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── ENGINEER CARDS ────────────────────────────────────────────────
-function renderEngineerCards(){
-  document.getElementById('engineerGrid').innerHTML=ENGINEERS.map(ae=>{
-    const ps=PROJECTS.filter(p=>p.ae===ae.name);
-    const avg=Math.round(ps.reduce((s,p)=>s+p.progress,0)/ps.length);
-    return `<div class="workload-card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-        <div class="ae-avatar" style="width:40px;height:40px;font-size:12px;background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div>
-        <div><div class="ae-name">${ae.name}</div><div class="ae-projects">${ps.length} projects &middot; avg ${avg}%</div></div>
-      </div>
-      <div class="workload-bar"><div class="workload-fill" style="width:${(ps.length/5)*100}%;background:${ae.color}"></div></div>
-      <div class="workload-pct">${ps.length}/5 capacity</div>
-      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px">${ps.map(p=>`<span style="font-size:11px;padding:3px 10px;border-radius:5px;background:${SC[p.stage]}22;color:${SC[p.stage]};border:1px solid ${SC[p.stage]}33;letter-spacing:.2px">${p.stage}</span>`).join('')}</div>
-    </div>`;
-  }).join('');
-}
-
-// ── AUDIT MODAL ───────────────────────────────────────────────────
-function openAudit(name){
-  const p=PROJECTS.find(x=>x.name===name);
-  const ae=ENGINEERS.find(e=>e.name===p.ae) || {id:initialsOf(p.ae||'?'),name:p.ae||'Unassigned',color:'#5a5f78'};
-  const stc=SC[p.stage];
-
-  document.getElementById('auditTitle').textContent=p.name;
-  document.getElementById('auditMeta').innerHTML=`
-    <span class="pill ${PCLS[p.pillar]}">${p.pillar}</span>
-    <span class="stage-badge"><span class="stage-dot" style="background:${stc}"></span>${p.stage}</span>
-    <span style="font-size:12px;color:var(--muted)">·</span>
-    <div class="ae-tag"><div class="ae-avatar" style="background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div><span style="font-size:13px">${ae.name}</span></div>`;
-
-  document.getElementById('csbBanner').innerHTML=`
-    <div>
-      <div class="csb-label">Current Stage</div>
-      <div class="csb-stage" style="color:${stc}"><span class="csb-dot" style="background:${stc}"></span>${p.stage}</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:${stc};line-height:1;letter-spacing:-1px">${p.progress}%</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.5px;text-transform:uppercase">Completion</div>
-    </div>`;
-
-  const si=STAGES.indexOf(p.stage);
-  document.getElementById('stageTrack').innerHTML=STAGES.map((s,i)=>{
-    const cls=i<si?'done':i===si?'active':'';
-    return `<div class="st-step ${cls}" style="--sc:${SC[s]}">
-      <div class="st-dot">${i<si?'&#10003;':''}</div>
-      <div class="st-name">${s}</div>
-    </div>`;
-  }).join('');
-
-  const logs=LOGS[name]||[];
-  document.getElementById('auditCount').textContent=`${logs.length} entr${logs.length!==1?'ies':'y'}`;
-  const tl=document.getElementById('auditTimeline');
-  if(!logs.length){tl.innerHTML='<div class="audit-empty">No audit entries yet.</div>';}
-  else{
-    const EVENT_META={
-      stage_change: {lbl:'Stage Transition',  color:null },
-      created:      {lbl:'Project Initialized',color:'#00e5c0'},
-      comment:      {lbl:'Comment Added',      color:'#6c63ff'},
-      file_added:   {lbl:'File Added',         color:'#74b9ff'},
-      file_edited:  {lbl:'File Edited',        color:'#ffc857'},
-      note:         {lbl:'Note',               color:'#6c63ff'},
-    };
-    const safeHtml=(s)=>(s||'').toString().replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
-
-    tl.innerHTML=logs.map((e,i)=>{
-      const isLast=i===logs.length-1;
-      const meta=EVENT_META[e.type]||EVENT_META.note;
-      const dc=e.type==='stage_change'?(SC[e.toStage]||'#6c63ff'):meta.color;
-      const lbl=meta.lbl;
-      const authorLine=e.author ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">by <strong style="color:var(--text);font-weight:600">${safeHtml(e.author)}</strong></div>` : '';
-
-      let body='';
-      if(e.type==='stage_change'){
-        body=`${authorLine}<div class="audit-stage-row">
-          <span class="audit-stag" style="background:${SC[e.fromStage]}22;color:${SC[e.fromStage]};border:1px solid ${SC[e.fromStage]}44">${safeHtml(e.fromStage)}</span>
-          <span class="audit-arrow">&#8594;</span>
-          <span class="audit-stag" style="background:${SC[e.toStage]}22;color:${SC[e.toStage]};border:1px solid ${SC[e.toStage]}44">${safeHtml(e.toStage)}</span>
-        </div>${e.note?`<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>`:''}`;
-      } else if(e.type==='created'){
-        body=`${authorLine}<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${safeHtml(e.note||'')}</div>`;
-      } else {
-        body=`${authorLine}<div class="audit-note">${safeHtml(e.note||'')}</div>`;
+      function initialsOf(name) {
+        const parts = (name||'').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '?';
+        if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+        return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
       }
 
-      return `<div class="audit-entry" style="--dc:${dc}">
-        <div class="audit-line">
-          <div class="audit-dot${e.type!=='note'?' filled':''}"></div>
-          ${!isLast?'<div class="audit-connector"></div>':''}
-        </div>
-        <div class="audit-content">
-          <div class="audit-type">${lbl}</div>
-          ${body}
-          <div class="audit-ts">${fmtDate(e.ts)}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  document.getElementById('auditOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function closeAudit(){document.getElementById('auditOverlay').classList.remove('open');document.body.style.overflow='';}
-function handleOverlayClick(e){if(e.target===document.getElementById('auditOverlay'))closeAudit();}
+      function buildEngineers() {
+        const seen = new Set(), names = [];
+        PROJECTS.forEach(p => { if (p.ae && !seen.has(p.ae)) { seen.add(p.ae); names.push(p.ae); } });
+        ENGINEERS = names.map((name, i) => ({
+          id: initialsOf(name), name,
+          color: ENGINEER_PALETTE[i % ENGINEER_PALETTE.length],
+        }));
+      }
 
-// ── CHARTS ────────────────────────────────────────────────────────
-let charts={};
-function initCharts(){
-  Chart.defaults.color=textColor();
-  Chart.defaults.borderColor=gridColor();
-  Chart.defaults.font.family="'DM Mono', monospace";
+      const STAGES = ['Discover','Design','Build','Test','Deploy','Execute','Monitor'];
+      const SC = {
+        Discover:'#ff6b9d', Design:'#a29bfe', Build:'#74b9ff', Test:'#00cec9',
+        Deploy:'#55efc4', Execute:'#fdcb6e', Monitor:'#e17055',
+      };
+      const PILLARS = ['HR','Talent Acquisition','Finance','Marketing','Sales'];
+      const PC = { HR:'#ff6b6b','Talent Acquisition':'#ff9f43',Finance:'#00e5c0',Marketing:'#6c63ff',Sales:'#ffc857' };
+      const PCLS = { HR:'pill-hr','Talent Acquisition':'pill-ta',Finance:'pill-fin',Marketing:'pill-mkt',Sales:'pill-sales' };
 
-  charts.pillar=new Chart(document.getElementById('chartPillar'),{
-    type:'doughnut',
-    data:{labels:PILLARS,datasets:[{data:PILLARS.map(p=>PROJECTS.filter(pr=>pr.pillar===p).length),backgroundColor:PILLARS.map(p=>PC[p]+'99'),borderColor:PILLARS.map(p=>PC[p]),borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{boxWidth:10,padding:16}}}}
-  });
+      // ── LIVE DATA ─────────────────────────────────────────────────────
+      let PROJECTS = [], LOGS = {};
 
-  charts.stage=new Chart(document.getElementById('chartStage'),{
-    type:'bar',
-    data:{labels:STAGES,datasets:[{data:STAGES.map(s=>PROJECTS.filter(p=>p.stage===s).length),backgroundColor:STAGES.map(s=>SC[s]+'99'),borderColor:STAGES.map(s=>SC[s]),borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1},grid:{color:gridColor()}},x:{grid:{display:false}}}}
-  });
+      // ── LOADING UI ────────────────────────────────────────────────────
+      function showLoader(msg='Loading…') {
+        const el = document.getElementById('loadingOverlay');
+        el.style.display = 'flex';
+        el.innerHTML = `<div class="loader-spinner"></div><div class="loader-text">${msg}</div>`;
+      }
+      function hideLoader() { document.getElementById('loadingOverlay').style.display = 'none'; }
+      function showError(msg) {
+        const el = document.getElementById('loadingOverlay');
+        el.style.display = 'flex';
+        el.innerHTML = `<div style="text-align:center;padding:0 24px">
+          <div style="font-size:28px;margin-bottom:12px">⚠️</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#ff6b6b;margin-bottom:8px">Failed to load data</div>
+          <div style="font-size:13px;color:var(--muted);max-width:380px;line-height:1.7">${msg}</div>
+          <button onclick="loadFromSheets()" style="margin-top:20px;background:var(--accent);border:none;border-radius:8px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;cursor:pointer">↻ Retry</button>
+        </div>`;
+      }
 
-  charts.progress=new Chart(document.getElementById('chartProgress'),{
-    type:'bar',data:buildProgressData(),
-    options:{
-      indexAxis:'y',responsive:false,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{ x:{min:0,max:100,grid:{color:gridColor()}}, y:{grid:{display:false}} }
-    }
-  });
-  resizeProgressChart();
+      // ── GOOGLE SHEETS FETCH (JSONP — works cross-origin) ──────────────
+      function fetchSheet(sheet) {
+        return new Promise((resolve, reject) => {
+          const cbName = '__gviz_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+          const script = document.createElement('script');
+          const cleanup = () => { delete window[cbName]; script.parentNode && script.parentNode.removeChild(script); };
+          const timer = setTimeout(() => { cleanup(); reject(new Error('Request timed out after 20s')); }, 20000);
 
-  charts.ae=new Chart(document.getElementById('chartAE'),{
-    type:'bar',
-    data:{labels:ENGINEERS.map(e=>e.name.split(' ')[0]),datasets:[{data:ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.name).length),backgroundColor:ENGINEERS.map(e=>e.color+'99'),borderColor:ENGINEERS.map(e=>e.color),borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-  });
+          window[cbName] = (res) => {
+            clearTimeout(timer); cleanup();
+            if (res && res.status === 'ok' && res.table) resolve(res.table);
+            else {
+              const m = res?.errors?.[0]?.detailed_message || res?.errors?.[0]?.message || 'Sheet returned an error';
+              reject(new Error(m));
+            }
+          };
+          script.onerror = () => { clearTimeout(timer); cleanup(); reject(new Error('Network error — check that the sheet is shared publicly')); };
+          script.src = `https://docs.google.com/spreadsheets/d/${sheet.id}/gviz/tq`
+            + `?tqx=out:json;responseHandler:${cbName}&gid=${encodeURIComponent(sheet.gid)}`;
+          document.head.appendChild(script);
+        });
+      }
 
-  charts.burndown=new Chart(document.getElementById('chartBurndown'),{
-    type:'radar',
-    data:{labels:STAGES,datasets:PILLARS.map(p=>({label:p,data:STAGES.map(s=>{const si=STAGES.indexOf(s);return PROJECTS.filter(pr=>pr.pillar===p).reduce((sum,pr)=>sum+(STAGES.indexOf(pr.stage)>=si?1:0),0);}),borderColor:PC[p],backgroundColor:PC[p]+'20',borderWidth:2}))},
-    options:{ responsive:true,maintainAspectRatio:false, scales:{r:{grid:{color:gridColor()},angleLines:{color:gridColor()},ticks:{display:false}}} }
-  });
-}
+      function parseProjects(table) {
+        // Columns: Project Name | Pillar | Stage | Progress | AE ID (ignored) | AE Name | Priority
+        return table.rows.map(row => {
+          const c = row.c;
+          return {
+            name:     (c[0]?.v||'').toString().trim(),
+            pillar:   (c[1]?.v||'').toString().trim(),
+            stage:    (c[2]?.v||'').toString().trim(),
+            progress: parseInt(c[3]?.v||0),
+            ae:       (c[5]?.v||'').toString().trim(),   // col F = AE Name
+            priority: (c[6]?.v||'Medium').toString().trim(),
+          };
+        }).filter(p => p.name);
+      }
 
-function resizeProgressChart(){
-  const count=filtered.length||1;
-  const canvas=document.getElementById('chartProgress');
-  const wrap=document.getElementById('progressWrap');
-  canvas.style.height=(count*36)+'px';
-  if(charts.progress) charts.progress.resize();
-}
+      function parseAuditLog(table) {
+        // Columns: Project Name | Type | From Stage | To Stage | Timestamp | Note
+        const logs = {};
+        table.rows.forEach(row => {
+          const c = row.c;
+          const name = (c[0]?.v||'').toString().trim();
+          if (!name) return;
+          if (!logs[name]) logs[name] = [];
+          let ts = Date.now();
+          const raw = c[4]?.v;
+          if (raw) {
+            if (typeof raw === 'string' && raw.startsWith('Date(')) {
+              const p = raw.replace('Date(','').replace(')','').split(',').map(Number);
+              ts = new Date(p[0],p[1],p[2],p[3]||0,p[4]||0).getTime();
+            } else {
+              ts = new Date(raw).getTime() || Date.now();
+            }
+          }
+          logs[name].push({
+            type:      (c[1]?.v||'note').toString().trim(),
+            fromStage: (c[2]?.v||'').toString().trim() || null,
+            toStage:   (c[3]?.v||'').toString().trim() || null,
+            ts,
+            note:      (c[5]?.v||'').toString().trim() || null,
+          });
+        });
+        Object.keys(logs).forEach(k => logs[k].sort((a,b) => b.ts - a.ts));
+        return logs;
+      }
 
-function buildProgressData(){
-  return{labels:filtered.map(p=>p.name),datasets:[{data:filtered.map(p=>p.progress),backgroundColor:filtered.map(p=>SC[p.stage]+'cc'),borderColor:filtered.map(p=>SC[p.stage]),borderWidth:2}]};
-}
+      async function loadFromSheets() {
+        showLoader('Connecting to Google Sheets…');
+        try {
+          showLoader('Fetching projects…');
+          const pt = await fetchSheet(PROJECTS_SHEET);
+          PROJECTS = parseProjects(pt);
+          buildEngineers();
 
-function updateCharts(){
-  charts.pillar.data.datasets[0].data=PILLARS.map(p=>filtered.filter(pr=>pr.pillar===p).length);charts.pillar.update();
-  charts.stage.data.datasets[0].data=STAGES.map(s=>filtered.filter(p=>p.stage===s).length);charts.stage.update();
-  const pd=buildProgressData();
-  charts.progress.data.labels=pd.labels; charts.progress.data.datasets=pd.datasets;
-  resizeProgressChart(); charts.progress.update();
-}
+          showLoader('Fetching audit log…');
+          const at = await fetchSheet(AUDIT_SHEET);
+          LOGS = parseAuditLog(at);
 
-function refreshChartColors(){
-  const g=gridColor(),t=textColor();
-  Chart.defaults.color=t; Chart.defaults.borderColor=g;
-  ['stage','progress','ae','burndown'].forEach(k=>{
-    const c=charts[k]; if(!c)return;
-    if(c.options.scales?.y?.grid) c.options.scales.y.grid.color=g;
-    if(c.options.scales?.x?.grid) c.options.scales.x.grid.color=g;
-    if(c.options.scales?.r?.grid) {c.options.scales.r.grid.color=g; c.options.scales.r.angleLines.color=g;}
-    c.update();
-  });
-}
+          hideLoader();
+          bootDashboard();
+        } catch(err) {
+          console.error(err);
+          showError(
+            `Could not reach Google Sheets.<br><br>
+             Make sure the spreadsheet is shared as <strong>"Anyone with the link can view"</strong>.<br><br>
+             <small style="opacity:.6">${err.message}</small>`
+          );
+        }
+      }
 
-// ── BOOT ──────────────────────────────────────────────────────────
-function bootDashboard(){
-  const livePillars=[...new Set(PROJECTS.map(p=>p.pillar))].sort();
-  activePillars=new Set(livePillars);
-  filtered=[...PROJECTS];
-  renderPillarCheckboxes(); renderTable(); renderEngineerCards(); updateKPIs();
-  if(Object.keys(charts).length) updateCharts(); else initCharts();
-}
+      // ── STATE ─────────────────────────────────────────────────────────
+      let activePillars = new Set(PILLARS);
+      let activeStage   = 'all';
+      let filtered      = [];
 
-loadFromSheets();
-</script>
-</body>
+      // ── THEME ─────────────────────────────────────────────────────────
+      function toggleTheme() {
+        const html = document.documentElement;
+        const goingDark = html.getAttribute('data-theme') === 'light';
+        html.setAttribute('data-theme', goingDark ? 'dark' : 'light');
+        document.getElementById('themeIcon').textContent  = goingDark ? '☀️' : '🌙';
+        document.getElementById('themeLabel').textContent = goingDark ? 'Light Mode' : 'Dark Mode';
+        refreshChartColors();
+      }
+
+      // ── HELPERS ───────────────────────────────────────────────────────
+      function fmtDate(ts) {
+        const d = new Date(ts);
+        return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+          + ' · ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      }
+      function gridColor() { return document.documentElement.getAttribute('data-theme')==='dark'?'#1e2130':'#dde1ed'; }
+      function textColor() { return document.documentElement.getAttribute('data-theme')==='dark'?'#8892aa':'#6b7491'; }
+      function safeHtml(s) {
+        return (s||'').toString().replace(/[&<>"']/g, c =>
+          ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      // ── PILLAR CHECKBOXES ─────────────────────────────────────────────
+      function renderPillarCheckboxes() {
+        const livePillars = PILLARS.filter(p => PROJECTS.some(pr => pr.pillar === p));
+        document.getElementById('pillarCheckboxes').innerHTML = livePillars.map(p => {
+          const color = PC[p] || '#888';
+          const checked = activePillars.has(p);
+          return `<div class="pillar-cb-item${checked?' checked':''}"
+            style="--cb-color:${color};--cb-color-bg:${color}18"
+            onclick="togglePillar('${p}')">
+            <div class="pillar-cb-box">${checked?'&#10003;':''}</div>
+            <span>${p}</span>
+          </div>`;
+        }).join('');
+      }
+      function togglePillar(p) {
+        activePillars.has(p) ? activePillars.delete(p) : activePillars.add(p);
+        renderPillarCheckboxes(); applyFilters();
+      }
+      function selectAllPillars() { activePillars = new Set(PILLARS); renderPillarCheckboxes(); applyFilters(); }
+      function clearAllPillars()  { activePillars = new Set();        renderPillarCheckboxes(); applyFilters(); }
+
+      // ── STAGE FILTER ──────────────────────────────────────────────────
+      function filterData(v, type, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          if ((b.getAttribute('onclick')||'').includes(`'${type}'`)) b.classList.remove('active');
+        });
+        btn.classList.add('active');
+        activeStage = v;
+        applyFilters();
+      }
+      function applyFilters() {
+        filtered = PROJECTS.filter(p => {
+          const pillarOk = activePillars.size === 0 ? false : activePillars.has(p.pillar);
+          const stageOk  = activeStage === 'all' || p.stage === activeStage;
+          return pillarOk && stageOk;
+        });
+        renderTable(); updateKPIs(); updateCharts();
+      }
+
+      // ── KPIs ──────────────────────────────────────────────────────────
+      function updateKPIs() {
+        const t   = filtered.length;
+        const a   = filtered.filter(p => p.stage === 'Execute').length;
+        const d   = filtered.filter(p => p.stage === 'Monitor').length;
+        const avg = t ? Math.round(filtered.reduce((s,p)=>s+p.progress,0)/t) : 0;
+        document.getElementById('kpiTotal').textContent  = t;
+        document.getElementById('kpiActive').textContent = a;
+        document.getElementById('kpiDone').textContent   = d;
+        document.getElementById('kpiAvg').textContent    = avg + '%';
+        document.getElementById('kpiEng').textContent    = ENGINEERS.length;
+        const sel = PILLARS.filter(p => activePillars.has(p));
+        const sub = document.getElementById('kpiTotalSub');
+        if (sub) sub.textContent = sel.length === 0 ? 'no pillars selected'
+          : sel.length === 1 ? `in ${sel[0]}`
+          : sel.length === PILLARS.length ? `across ${PILLARS.length} pillars`
+          : `across ${sel.length} pillars (filtered)`;
+      }
+
+      // ── TABLE ─────────────────────────────────────────────────────────
+      function renderTable() {
+        document.getElementById('tableCount').textContent =
+          `Showing ${filtered.length} of ${PROJECTS.length} projects`;
+        document.getElementById('projectTable').innerHTML = filtered.map(p => {
+          const ae = ENGINEERS.find(e => e.name === p.ae) || { id: initialsOf(p.ae||'?'), name: p.ae||'Unassigned', color:'#5a5f78' };
+          const pc = p.priority==='High'?'#ff6b6b':p.priority==='Medium'?'#ffc857':'#5a5f78';
+          const lc = (LOGS[p.name]||[]).length;
+          return `<tr onclick="openAudit('${p.name.replace(/'/g,"\\'")}')">
+            <td style="font-family:'Syne',sans-serif;font-weight:600;font-size:14px">${safeHtml(p.name)}
+              <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-left:10px;font-weight:400;opacity:.8">${lc} log${lc!==1?'s':''}</span>
+            </td>
+            <td><span class="pill ${PCLS[p.pillar]||''}">${safeHtml(p.pillar)}</span></td>
+            <td><span class="stage-badge"><span class="stage-dot" style="background:${SC[p.stage]||'#888'}"></span>${safeHtml(p.stage)}</span></td>
+            <td style="min-width:140px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${p.progress}%;background:${SC[p.stage]||'#888'}"></div></div>
+                <span style="font-size:12px;color:var(--muted);width:36px;text-align:right">${p.progress}%</span>
+              </div>
+            </td>
+            <td><div class="ae-tag">
+              <div class="ae-avatar" style="background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div>
+              ${safeHtml(ae.name)}
+            </div></td>
+            <td><span style="color:${pc};font-size:12px;letter-spacing:.3px">&#9679; ${safeHtml(p.priority)}</span></td>
+          </tr>`;
+        }).join('');
+      }
+
+      // ── ENGINEER CARDS ────────────────────────────────────────────────
+      function renderEngineerCards() {
+        document.getElementById('engineerGrid').innerHTML = ENGINEERS.map(ae => {
+          const ps  = PROJECTS.filter(p => p.ae === ae.name);
+          const avg = ps.length ? Math.round(ps.reduce((s,p)=>s+p.progress,0)/ps.length) : 0;
+          return `<div class="workload-card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div class="ae-avatar" style="width:40px;height:40px;font-size:12px;background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div>
+              <div><div class="ae-name">${safeHtml(ae.name)}</div><div class="ae-projects">${ps.length} projects &middot; avg ${avg}%</div></div>
+            </div>
+            <div class="workload-bar"><div class="workload-fill" style="width:${Math.min((ps.length/5)*100,100)}%;background:${ae.color}"></div></div>
+            <div class="workload-pct">${ps.length}/5 capacity</div>
+            <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px">
+              ${ps.map(p=>`<span style="font-size:11px;padding:3px 10px;border-radius:5px;background:${SC[p.stage]||'#888'}22;color:${SC[p.stage]||'#888'};border:1px solid ${SC[p.stage]||'#888'}33">${safeHtml(p.stage)}</span>`).join('')}
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // ── AUDIT MODAL ───────────────────────────────────────────────────
+      function openAudit(name) {
+        const p = PROJECTS.find(x => x.name === name); if (!p) return;
+        const ae  = ENGINEERS.find(e => e.name === p.ae) || { id: initialsOf(p.ae||'?'), name: p.ae||'Unassigned', color:'#5a5f78' };
+        const stc = SC[p.stage] || '#888';
+
+        document.getElementById('auditTitle').textContent = p.name;
+        document.getElementById('auditMeta').innerHTML = `
+          <span class="pill ${PCLS[p.pillar]||''}">${safeHtml(p.pillar)}</span>
+          <span class="stage-badge"><span class="stage-dot" style="background:${stc}"></span>${safeHtml(p.stage)}</span>
+          <span style="font-size:12px;color:var(--muted)">·</span>
+          <div class="ae-tag">
+            <div class="ae-avatar" style="background:${ae.color}22;color:${ae.color};border:1px solid ${ae.color}44">${ae.id}</div>
+            <span style="font-size:13px">${safeHtml(ae.name)}</span>
+          </div>`;
+
+        document.getElementById('csbBanner').innerHTML = `
+          <div>
+            <div class="csb-label">Current Stage</div>
+            <div class="csb-stage" style="color:${stc}"><span class="csb-dot" style="background:${stc}"></span>${safeHtml(p.stage)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:${stc};line-height:1;letter-spacing:-1px">${p.progress}%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.5px;text-transform:uppercase">Completion</div>
+          </div>`;
+
+        const si = STAGES.indexOf(p.stage);
+        document.getElementById('stageTrack').innerHTML = STAGES.map((s,i) => {
+          const cls = i < si ? 'done' : i === si ? 'active' : '';
+          return `<div class="st-step ${cls}" style="--sc:${SC[s]}">
+            <div class="st-dot">${i<si?'&#10003;':''}</div>
+            <div class="st-name">${s}</div>
+          </div>`;
+        }).join('');
+
+        const logs = LOGS[name] || [];
+        document.getElementById('auditCount').textContent = `${logs.length} entr${logs.length!==1?'ies':'y'}`;
+        const tl = document.getElementById('auditTimeline');
+
+        if (!logs.length) {
+          tl.innerHTML = '<div class="audit-empty">No audit entries yet.</div>';
+        } else {
+          const TYPE_META = {
+            stage_change: { lbl:'Stage Transition',    color: null        },
+            created:      { lbl:'Project Initialized', color:'#00e5c0'    },
+            comment:      { lbl:'Comment Added',       color:'#6c63ff'    },
+            file_added:   { lbl:'File Added',          color:'#74b9ff'    },
+            file_edited:  { lbl:'File Edited',         color:'#ffc857'    },
+            note:         { lbl:'Note',                color:'#6c63ff'    },
+          };
+          tl.innerHTML = logs.map((e, i) => {
+            const isLast = i === logs.length - 1;
+            const meta   = TYPE_META[e.type] || TYPE_META.note;
+            const dc     = e.type === 'stage_change' ? (SC[e.toStage]||'#6c63ff') : meta.color;
+
+            let body = '';
+            if (e.type === 'stage_change') {
+              body = `<div class="audit-stage-row">
+                <span class="audit-stag" style="background:${SC[e.fromStage]||'#888'}22;color:${SC[e.fromStage]||'#888'};border:1px solid ${SC[e.fromStage]||'#888'}44">${safeHtml(e.fromStage)}</span>
+                <span class="audit-arrow">&#8594;</span>
+                <span class="audit-stag" style="background:${SC[e.toStage]||'#888'}22;color:${SC[e.toStage]||'#888'};border:1px solid ${SC[e.toStage]||'#888'}44">${safeHtml(e.toStage)}</span>
+              </div>
+              ${e.note ? `<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>` : ''}`;
+            } else if (e.type === 'created') {
+              body = `<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${safeHtml(e.note||'')}</div>`;
+            } else {
+              body = `<div class="audit-note">${safeHtml(e.note||'')}</div>`;
+            }
+
+            return `<div class="audit-entry" style="--dc:${dc}">
+              <div class="audit-line">
+                <div class="audit-dot${e.type!=='note'?' filled':''}"></div>
+                ${!isLast?'<div class="audit-connector"></div>':''}
+              </div>
+              <div class="audit-content">
+                <div class="audit-type">${meta.lbl}</div>
+                ${body}
+                <div class="audit-ts">${fmtDate(e.ts)}</div>
+              </div>
+            </div>`;
+          }).join('');
+        }
+        document.getElementById('auditOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeAudit() { document.getElementById('auditOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+      function handleOverlayClick(e) { if (e.target === document.getElementById('auditOverlay')) closeAudit(); }
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAudit(); });
+
+      // ── CHARTS ────────────────────────────────────────────────────────
+      let charts = {};
+
+      function initCharts() {
+        Chart.defaults.color      = textColor();
+        Chart.defaults.borderColor= gridColor();
+        Chart.defaults.font.family= "'DM Mono', monospace";
+        Chart.defaults.font.size  = 12;
+
+        charts.pillar = new Chart(document.getElementById('chartPillar'), {
+          type:'doughnut',
+          data:{ labels:PILLARS, datasets:[{
+            data: PILLARS.map(p => PROJECTS.filter(pr=>pr.pillar===p).length),
+            backgroundColor: PILLARS.map(p=>PC[p]+'99'),
+            borderColor:     PILLARS.map(p=>PC[p]),
+            borderWidth:2,
+          }]},
+          options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+            plugins:{ legend:{ position:'right', labels:{ boxWidth:10, padding:16 }}} },
+        });
+
+        charts.stage = new Chart(document.getElementById('chartStage'), {
+          type:'bar',
+          data:{ labels:STAGES, datasets:[{
+            data: STAGES.map(s => PROJECTS.filter(p=>p.stage===s).length),
+            backgroundColor: STAGES.map(s=>SC[s]+'99'),
+            borderColor:     STAGES.map(s=>SC[s]),
+            borderWidth:2, borderRadius:6,
+          }]},
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ display:false }},
+            scales:{ y:{ ticks:{stepSize:1}, grid:{color:gridColor()} }, x:{ grid:{display:false} } },
+          },
+        });
+
+        const progressCanvas = document.getElementById('chartProgress');
+        charts.progress = new Chart(progressCanvas, {
+          type:'bar', data:buildProgressData(),
+          options:{
+            indexAxis:'y', responsive:false, maintainAspectRatio:false,
+            plugins:{ legend:{ display:false }},
+            scales:{
+              x:{ min:0, max:100, grid:{color:gridColor()}, ticks:{callback:v=>v+'%'} },
+              y:{ grid:{display:false}, ticks:{font:{size:11}} },
+            },
+            onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length?'pointer':'default'; },
+            onClick:(evt,els)=>{
+              if (!els.length) return;
+              const name = filtered?.[els[0].index]?.name;
+              if (name) openAudit(name);
+            },
+          },
+        });
+        resizeProgressChart();
+
+        charts.ae = new Chart(document.getElementById('chartAE'), {
+          type:'bar',
+          data:{ labels: ENGINEERS.map(e=>e.name.split(' ')[0]),
+            datasets:[{
+              data: ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.name).length),
+              backgroundColor: ENGINEERS.map(e=>e.color+'99'),
+              borderColor:     ENGINEERS.map(e=>e.color),
+              borderWidth:2, borderRadius:6,
+            }]},
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false}},
+            scales:{ y:{ticks:{stepSize:1},grid:{color:gridColor()}}, x:{grid:{display:false}} },
+          },
+        });
+
+        charts.burndown = new Chart(document.getElementById('chartBurndown'), {
+          type:'radar',
+          data:{ labels:STAGES, datasets: PILLARS.map(p=>({
+            label:p,
+            data: STAGES.map(s=>{ const si=STAGES.indexOf(s); return PROJECTS.filter(pr=>pr.pillar===p).reduce((sum,pr)=>sum+(STAGES.indexOf(pr.stage)>=si?1:0),0); }),
+            borderColor: PC[p], backgroundColor: PC[p]+'20', borderWidth:2,
+          }))},
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,padding:14}, onClick:()=>{} } },
+            scales:{ r:{ grid:{color:gridColor()}, angleLines:{color:gridColor()}, ticks:{display:false} } },
+          },
+        });
+      }
+
+      function resizeProgressChart() {
+        const rowH = 36, minH = 120, maxVisible = 15;
+        const count = filtered.length || 1;
+        const canvas = document.getElementById('chartProgress');
+        const wrap   = document.getElementById('progressWrap');
+        canvas.style.height = Math.max(minH, count * rowH) + 'px';
+        canvas.height       = Math.max(minH, count * rowH);
+        wrap.style.maxHeight= count > maxVisible ? (maxVisible * rowH) + 'px' : 'none';
+        wrap.style.overflowY= count > maxVisible ? 'auto' : 'visible';
+        if (charts.progress) charts.progress.resize();
+      }
+
+      function buildProgressData() {
+        return {
+          labels: filtered.map(p => p.name),
+          datasets:[{
+            data: filtered.map(p => p.progress),
+            backgroundColor: filtered.map(p=>(SC[p.stage]||'#888')+'cc'),
+            borderColor:     filtered.map(p=>SC[p.stage]||'#888'),
+            borderWidth:2, borderRadius:4, barThickness:18,
+          }],
+        };
+      }
+
+      function updateCharts() {
+        if (!charts.pillar) return;
+        charts.pillar.data.datasets[0].data = PILLARS.map(p=>filtered.filter(pr=>pr.pillar===p).length);
+        charts.pillar.update();
+        charts.stage.data.datasets[0].data = STAGES.map(s=>filtered.filter(p=>p.stage===s).length);
+        charts.stage.update();
+        const pd = buildProgressData();
+        charts.progress.data.labels   = pd.labels;
+        charts.progress.data.datasets = pd.datasets;
+        resizeProgressChart();
+        charts.progress.update();
+      }
+
+      function refreshChartColors() {
+        const g = gridColor(), t = textColor();
+        Chart.defaults.color = t; Chart.defaults.borderColor = g;
+        ['stage','progress','ae'].forEach(k => {
+          const c = charts[k]; if (!c) return;
+          if (c.options.scales?.y?.grid) c.options.scales.y.grid.color = g;
+          if (c.options.scales?.x?.grid) c.options.scales.x.grid.color = g;
+          c.update();
+        });
+        if (charts.burndown) {
+          charts.burndown.options.scales.r.grid.color       = g;
+          charts.burndown.options.scales.r.angleLines.color = g;
+          charts.burndown.update();
+        }
+      }
+
+      // ── BOOT ──────────────────────────────────────────────────────────
+      function bootDashboard() {
+        const livePillars = [...new Set(PROJECTS.map(p=>p.pillar))];
+        activePillars = new Set(livePillars);
+        filtered = [...PROJECTS];
+        renderPillarCheckboxes();
+        renderTable();
+        renderEngineerCards();
+        updateKPIs();
+        if (Object.keys(charts).length) updateCharts();
+        else initCharts();
+      }
+
+      // ── START ─────────────────────────────────────────────────────────
+      loadFromSheets();
+    </script>
+  </body>
 </html>
