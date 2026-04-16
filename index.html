@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -225,8 +225,8 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
       <span>Refresh</span>
     </button>
     <button class="theme-toggle" onclick="toggleTheme()">
-      <span class="t-icon" id="themeIcon">&#9728;&#65039;</span>
-      <span id="themeLabel">Light Mode</span>
+      <span class="t-icon" id="themeIcon">🌙</span>
+      <span id="themeLabel">Dark Mode</span>
     </button>
     <div class="header-meta">
       <strong>Executive Portfolio Report</strong><br>
@@ -265,7 +265,6 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
     </div>
   </div>
 
-  <!-- PILLAR CHECKBOX FILTER -->
   <div class="pillar-filter-panel">
     <div class="pillar-filter-top">
       <span class="pillar-filter-title">Filter by Pillar</span>
@@ -277,7 +276,6 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
     <div class="pillar-checkboxes" id="pillarCheckboxes"></div>
   </div>
 
-  <!-- STAGE FILTER -->
   <div class="filters">
     <span class="filter-label">Stage</span>
     <button class="filter-btn active" onclick="filterData('all','stage',this)">All</button>
@@ -347,13 +345,11 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
   <div class="workload-grid" id="engineerGrid"></div>
 </main>
 
-<!-- LOADING OVERLAY -->
 <div id="loadingOverlay">
   <div class="loader-spinner"></div>
   <div class="loader-text" id="loadingMsg">Connecting to Google Sheets…</div>
 </div>
 
-<!-- AUDIT MODAL — READ ONLY -->
 <div class="modal-overlay" id="auditOverlay" onclick="handleOverlayClick(event)">
   <div class="modal-panel">
     <div class="modal-head">
@@ -382,8 +378,6 @@ tbody tr:hover td:first-child{color:var(--accent);text-decoration:underline;text
 
 <script>
 // ── GOOGLE SHEETS CONFIG ──────────────────────────────────────────
-// Two separate Google Sheets — one for projects, one for audit log.
-// Each entry has the workbook ID and the gid of the specific tab.
 const PROJECTS_SHEET = {
   id:  '1b1wca9-GTm5UlKkC-biu348Md_kiVbhjC2QA-Wfsgy4',
   gid: '137827075'
@@ -394,10 +388,8 @@ const AUDIT_SHEET = {
 };
 
 // ── CONSTANTS ─────────────────────────────────────────────────────
-// Engineers are built dynamically from the AE Name column in the Projects sheet.
-// Colors cycle through this palette in the order names first appear.
 const ENGINEER_PALETTE = ['#00e5c0','#6c63ff','#ff6b6b','#ffc857','#74b9ff','#ff9f43','#a29bfe','#55efc4','#fd79a8','#00b894','#fab1a0','#81ecec'];
-let ENGINEERS = []; // populated by buildEngineers() after projects load
+let ENGINEERS = []; 
 
 function initialsOf(name){
   const parts=name.trim().split(/\s+/).filter(Boolean);
@@ -407,7 +399,6 @@ function initialsOf(name){
 }
 
 function buildEngineers(){
-  // Use insertion order of AE Name as it appears in the projects data
   const seen=new Set();
   const names=[];
   PROJECTS.forEach(p=>{
@@ -449,10 +440,7 @@ function showError(msg){
 }
 
 // ── GOOGLE SHEETS FETCH (JSONP) ───────────────────────────────────
-// We load via <script> tag instead of fetch() so it works when the HTML
-// is opened directly from disk (file://), where fetch() is blocked by CORS.
 function fetchSheet(sheet){
-  // sheet = { id, gid }
   return new Promise((resolve, reject) => {
     const cbName = `__gvizCb_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
     const script = document.createElement('script');
@@ -492,32 +480,20 @@ function fetchSheet(sheet){
 }
 
 function parseProjects(table){
-  // Columns: Project Name, Pillar, Stage, Progress, AE ID, AE Name, Priority
-  // AE Name (col 5) is the source of truth — AE ID is ignored.
   return table.rows.map(row=>{
     const cells=row.c;
     return {
-      name:     (cells[0]?.v||'').toString().trim(),
-      pillar:   (cells[1]?.v||'').toString().trim(),
-      stage:    (cells[2]?.v||'').toString().trim(),
+      name:      (cells[0]?.v||'').toString().trim(),
+      pillar:    (cells[1]?.v||'').toString().trim(),
+      stage:     (cells[2]?.v||'').toString().trim(),
       progress: parseInt(cells[3]?.v||0),
-      ae:       (cells[5]?.v||'').toString().trim(),
+      ae:        (cells[5]?.v||'').toString().trim(),
       priority: (cells[6]?.v||'Medium').toString().trim(),
     };
   }).filter(p=>p.name);
 }
 
 function parseAuditLog(table){
-  // Columns (A-I):
-  //   A  Project Name
-  //   B  Type         (created | stage_change | note | comment | file_added | file_edited)
-  //   C  From Stage   (only for stage_change)
-  //   D  To Stage     (only for stage_change)
-  //   E  Timestamp
-  //   F  Note         (generic body: comment text, change description, etc.)
-  //   G  Author       (who made the change — team member name)
-  //   H  File Name    (for file_added / file_edited)
-  //   I  File URL     (optional link to the file)
   const logs={};
   table.rows.forEach(row=>{
     const cells=row.c;
@@ -525,7 +501,6 @@ function parseAuditLog(table){
     if(!name) return;
     if(!logs[name]) logs[name]=[];
 
-    // Parse timestamp — Google returns Date objects or strings
     let ts=Date.now();
     const tsRaw=cells[4]?.v;
     if(tsRaw){
@@ -548,7 +523,6 @@ function parseAuditLog(table){
       fileUrl:   (cells[8]?.v||'').toString().trim()||null,
     });
   });
-  // sort each project newest first
   Object.keys(logs).forEach(k=>logs[k].sort((a,b)=>b.ts-a.ts));
   return logs;
 }
@@ -569,22 +543,28 @@ async function loadFromSheets(){
     bootDashboard();
   } catch(err){
     console.error(err);
-    showError(`Could not reach Google Sheets.<br><br>Make sure both sheets are shared as <strong>"Anyone with the link can view"</strong> and the Sheet IDs / gids are correct.<br><br><small style="opacity:.6">${err.message}</small>`);
+    showError(`Could not reach Google Sheets.<br><br>Make sure both sheets are shared correctly.<br><br><small style="opacity:.6">${err.message}</small>`);
   }
 }
 
 // ── STATE ─────────────────────────────────────────────────────────
-let activePillars = new Set(PILLARS); // all selected by default
+let activePillars = new Set(PILLARS); 
 let activeStage   = 'all';
 let filtered      = [...PROJECTS];
 
-// ── THEME ─────────────────────────────────────────────────────────
+// ── THEME (UPDATED FOR LIGHT DEFAULT) ─────────────────────────────
 function toggleTheme(){
-  const html=document.documentElement;
-  const dark=html.getAttribute('data-theme')==='dark';
-  html.setAttribute('data-theme',dark?'light':'dark');
-  document.getElementById('themeIcon').textContent=dark?'🌙':'☀️';
-  document.getElementById('themeLabel').textContent=dark?'Dark Mode':'Light Mode';
+  const html = document.documentElement;
+  const isCurrentlyLight = html.getAttribute('data-theme') === 'light';
+  
+  const newTheme = isCurrentlyLight ? 'dark' : 'light';
+  html.setAttribute('data-theme', newTheme);
+  
+  // Update button text and icon
+  // If the new mode is DARK, the button should offer to switch back to LIGHT
+  document.getElementById('themeIcon').textContent = (newTheme === 'dark') ? '☀️' : '🌙';
+  document.getElementById('themeLabel').textContent = (newTheme === 'dark') ? 'Light Mode' : 'Dark Mode';
+  
   refreshChartColors();
 }
 
@@ -715,7 +695,6 @@ function openAudit(name){
       <div style="font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.5px;text-transform:uppercase">Completion</div>
     </div>`;
 
-  // stage track
   const si=STAGES.indexOf(p.stage);
   document.getElementById('stageTrack').innerHTML=STAGES.map((s,i)=>{
     const cls=i<si?'done':i===si?'active':'';
@@ -725,15 +704,13 @@ function openAudit(name){
     </div>`;
   }).join('');
 
-  // audit timeline
   const logs=LOGS[name]||[];
   document.getElementById('auditCount').textContent=`${logs.length} entr${logs.length!==1?'ies':'y'}`;
   const tl=document.getElementById('auditTimeline');
   if(!logs.length){tl.innerHTML='<div class="audit-empty">No audit entries yet.</div>';}
   else{
-    // Event type metadata (label + colour)
     const EVENT_META={
-      stage_change: {lbl:'Stage Transition',  color:null /* computed from toStage */ },
+      stage_change: {lbl:'Stage Transition',  color:null },
       created:      {lbl:'Project Initialized',color:'#00e5c0'},
       comment:      {lbl:'Comment Added',      color:'#6c63ff'},
       file_added:   {lbl:'File Added',         color:'#74b9ff'},
@@ -747,10 +724,7 @@ function openAudit(name){
       const meta=EVENT_META[e.type]||EVENT_META.note;
       const dc=e.type==='stage_change'?(SC[e.toStage]||'#6c63ff'):meta.color;
       const lbl=meta.lbl;
-
-      const authorLine=e.author
-        ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">by <strong style="color:var(--text);font-weight:600">${safeHtml(e.author)}</strong></div>`
-        : '';
+      const authorLine=e.author ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">by <strong style="color:var(--text);font-weight:600">${safeHtml(e.author)}</strong></div>` : '';
 
       let body='';
       if(e.type==='stage_change'){
@@ -760,23 +734,7 @@ function openAudit(name){
           <span class="audit-stag" style="background:${SC[e.toStage]}22;color:${SC[e.toStage]};border:1px solid ${SC[e.toStage]}44">${safeHtml(e.toStage)}</span>
         </div>${e.note?`<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>`:''}`;
       } else if(e.type==='created'){
-        body=`${authorLine}<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${safeHtml(e.note||'')}</div>
-          <div class="audit-stage-row"><span class="audit-stag" style="background:${SC['Discover']}22;color:${SC['Discover']};border:1px solid ${SC['Discover']}44">Initial stage: Discover</span></div>`;
-      } else if(e.type==='comment'){
-        body=`${authorLine}<div class="audit-note">${safeHtml(e.note||'')}</div>`;
-      } else if(e.type==='file_added' || e.type==='file_edited'){
-        const verb=e.type==='file_added'?'added':'edited';
-        const fileLabel=e.fileName?safeHtml(e.fileName):'Untitled file';
-        const fileLink=e.fileUrl
-          ? `<a href="${safeHtml(e.fileUrl)}" target="_blank" rel="noopener" style="color:${dc};text-decoration:none;border-bottom:1px dashed ${dc}88">${fileLabel}</a>`
-          : fileLabel;
-        body=`${authorLine}<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-left:2px solid ${dc};background:${dc}14;border-radius:0 6px 6px 0">
-          <span style="font-size:18px">&#128206;</span>
-          <div style="font-size:13px;line-height:1.4">
-            <div style="color:var(--text);font-weight:600">${fileLabel}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">File ${verb}${e.fileUrl?' · ':''}${e.fileUrl?`<a href="${safeHtml(e.fileUrl)}" target="_blank" rel="noopener" style="color:${dc}">open</a>`:''}</div>
-          </div>
-        </div>${e.note?`<div class="audit-note" style="margin-top:10px">${safeHtml(e.note)}</div>`:''}`;
+        body=`${authorLine}<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">${safeHtml(e.note||'')}</div>`;
       } else {
         body=`${authorLine}<div class="audit-note">${safeHtml(e.note||'')}</div>`;
       }
@@ -794,32 +752,28 @@ function openAudit(name){
       </div>`;
     }).join('');
   }
-
   document.getElementById('auditOverlay').classList.add('open');
   document.body.style.overflow='hidden';
 }
 function closeAudit(){document.getElementById('auditOverlay').classList.remove('open');document.body.style.overflow='';}
 function handleOverlayClick(e){if(e.target===document.getElementById('auditOverlay'))closeAudit();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAudit();});
 
 // ── CHARTS ────────────────────────────────────────────────────────
 let charts={};
-
 function initCharts(){
   Chart.defaults.color=textColor();
   Chart.defaults.borderColor=gridColor();
   Chart.defaults.font.family="'DM Mono', monospace";
-  Chart.defaults.font.size=12;
 
   charts.pillar=new Chart(document.getElementById('chartPillar'),{
     type:'doughnut',
-    data:{labels:PILLARS,datasets:[{data:PILLARS.map(p=>PROJECTS.filter(pr=>pr.pillar===p).length),backgroundColor:PILLARS.map(p=>PC[p]+'99'),borderColor:PILLARS.map(p=>PC[p]),borderWidth:2,hoverOffset:8}]},
+    data:{labels:PILLARS,datasets:[{data:PILLARS.map(p=>PROJECTS.filter(pr=>pr.pillar===p).length),backgroundColor:PILLARS.map(p=>PC[p]+'99'),borderColor:PILLARS.map(p=>PC[p]),borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{boxWidth:10,padding:16}}}}
   });
 
   charts.stage=new Chart(document.getElementById('chartStage'),{
     type:'bar',
-    data:{labels:STAGES,datasets:[{data:STAGES.map(s=>PROJECTS.filter(p=>p.stage===s).length),backgroundColor:STAGES.map(s=>SC[s]+'99'),borderColor:STAGES.map(s=>SC[s]),borderWidth:2,borderRadius:6}]},
+    data:{labels:STAGES,datasets:[{data:STAGES.map(s=>PROJECTS.filter(p=>p.stage===s).length),backgroundColor:STAGES.map(s=>SC[s]+'99'),borderColor:STAGES.map(s=>SC[s]),borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1},grid:{color:gridColor()}},x:{grid:{display:false}}}}
   });
 
@@ -828,115 +782,65 @@ function initCharts(){
     options:{
       indexAxis:'y',responsive:false,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{
-        x:{min:0,max:100,grid:{color:gridColor()},ticks:{callback:v=>v+'%'}},
-        y:{grid:{display:false},ticks:{font:{size:11}}}
-      },
-      onHover:(event,elements)=>{
-        event.native.target.style.cursor=elements.length?'pointer':'default';
-      },
-      onClick:(event,elements)=>{
-        if(!elements.length) return;
-        const idx=elements[0].index;
-        const projectName=filtered[idx].name;
-        openAudit(projectName);
-      }
+      scales:{ x:{min:0,max:100,grid:{color:gridColor()}}, y:{grid:{display:false}} }
     }
   });
   resizeProgressChart();
 
   charts.ae=new Chart(document.getElementById('chartAE'),{
     type:'bar',
-    data:{labels:ENGINEERS.map(e=>e.name.split(' ')[0]),datasets:[{label:'Projects',data:ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.name).length),backgroundColor:ENGINEERS.map(e=>e.color+'99'),borderColor:ENGINEERS.map(e=>e.color),borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{stepSize:1},grid:{color:gridColor()}},x:{grid:{display:false}}}}
+    data:{labels:ENGINEERS.map(e=>e.name.split(' ')[0]),datasets:[{data:ENGINEERS.map(e=>PROJECTS.filter(p=>p.ae===e.name).length),backgroundColor:ENGINEERS.map(e=>e.color+'99'),borderColor:ENGINEERS.map(e=>e.color),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
 
   charts.burndown=new Chart(document.getElementById('chartBurndown'),{
     type:'radar',
-    data:{labels:STAGES,datasets:PILLARS.map(p=>({label:p,data:STAGES.map(s=>{const si=STAGES.indexOf(s);return PROJECTS.filter(pr=>pr.pillar===p).reduce((sum,pr)=>sum+(STAGES.indexOf(pr.stage)>=si?1:0),0);}),borderColor:PC[p],backgroundColor:PC[p]+'20',borderWidth:2,pointBackgroundColor:PC[p]}))},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{
-          position:'bottom',
-          labels:{boxWidth:12,padding:16,font:{size:12}},
-          onClick:()=>{} // disable click-to-hide
-        }
-      },
-      scales:{r:{grid:{color:gridColor()},angleLines:{color:gridColor()},pointLabels:{font:{size:11}},ticks:{display:false}}}
-    }
+    data:{labels:STAGES,datasets:PILLARS.map(p=>({label:p,data:STAGES.map(s=>{const si=STAGES.indexOf(s);return PROJECTS.filter(pr=>pr.pillar===p).reduce((sum,pr)=>sum+(STAGES.indexOf(pr.stage)>=si?1:0),0);}),borderColor:PC[p],backgroundColor:PC[p]+'20',borderWidth:2}))},
+    options:{ responsive:true,maintainAspectRatio:false, scales:{r:{grid:{color:gridColor()},angleLines:{color:gridColor()},ticks:{display:false}}} }
   });
 }
 
 function resizeProgressChart(){
-  const rowH=36;
-  const minH=120;
-  const maxVisible=15;
   const count=filtered.length||1;
-  const fullH=Math.max(minH, count*rowH);
-  const capH=maxVisible*rowH;
   const canvas=document.getElementById('chartProgress');
   const wrap=document.getElementById('progressWrap');
-  // canvas is always full height so all bars render
-  canvas.style.height=fullH+'px';
-  canvas.height=fullH;
-  // wrapper scrolls if content exceeds 15 rows
-  wrap.style.maxHeight=count>maxVisible?capH+'px':'none';
-  wrap.style.overflowY=count>maxVisible?'auto':'visible';
+  canvas.style.height=(count*36)+'px';
   if(charts.progress) charts.progress.resize();
 }
 
 function buildProgressData(){
-  return{labels:filtered.map(p=>p.name.length>28?p.name.slice(0,26)+'…':p.name),datasets:[{data:filtered.map(p=>p.progress),backgroundColor:filtered.map(p=>SC[p.stage]+'cc'),borderColor:filtered.map(p=>SC[p.stage]),borderWidth:2,borderRadius:4,barThickness:18}]};
+  return{labels:filtered.map(p=>p.name),datasets:[{data:filtered.map(p=>p.progress),backgroundColor:filtered.map(p=>SC[p.stage]+'cc'),borderColor:filtered.map(p=>SC[p.stage]),borderWidth:2}]};
 }
 
 function updateCharts(){
   charts.pillar.data.datasets[0].data=PILLARS.map(p=>filtered.filter(pr=>pr.pillar===p).length);charts.pillar.update();
   charts.stage.data.datasets[0].data=STAGES.map(s=>filtered.filter(p=>p.stage===s).length);charts.stage.update();
   const pd=buildProgressData();
-  charts.progress.data.labels=pd.labels;
-  charts.progress.data.datasets=pd.datasets;
-  resizeProgressChart();
-  charts.progress.update();
+  charts.progress.data.labels=pd.labels; charts.progress.data.datasets=pd.datasets;
+  resizeProgressChart(); charts.progress.update();
 }
 
 function refreshChartColors(){
   const g=gridColor(),t=textColor();
   Chart.defaults.color=t; Chart.defaults.borderColor=g;
-  ['stage','progress','ae'].forEach(k=>{
+  ['stage','progress','ae','burndown'].forEach(k=>{
     const c=charts[k]; if(!c)return;
-    Object.values(c.options.scales||{}).forEach(sc=>{if(sc.grid)sc.grid.color=g;});
+    if(c.options.scales?.y?.grid) c.options.scales.y.grid.color=g;
+    if(c.options.scales?.x?.grid) c.options.scales.x.grid.color=g;
+    if(c.options.scales?.r?.grid) {c.options.scales.r.grid.color=g; c.options.scales.r.angleLines.color=g;}
     c.update();
   });
-  if(charts.burndown){
-    charts.burndown.options.scales.r.grid.color=g;
-    charts.burndown.options.scales.r.angleLines.color=g;
-    charts.burndown.update();
-  }
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────
 function bootDashboard(){
-  // derive unique PILLARS from loaded data
   const livePillars=[...new Set(PROJECTS.map(p=>p.pillar))].sort();
-  // keep ordering: known pillars first, then any new ones
-  const ordered=PILLARS.filter(p=>livePillars.includes(p)).concat(livePillars.filter(p=>!PILLARS.includes(p)));
-  // re-seed activePillars with live data
-  activePillars=new Set(ordered);
+  activePillars=new Set(livePillars);
   filtered=[...PROJECTS];
-
-  renderPillarCheckboxes();
-  renderTable();
-  renderEngineerCards();
-  updateKPIs();
-  if(Object.keys(charts).length) {
-    updateCharts();
-  } else {
-    initCharts();
-  }
+  renderPillarCheckboxes(); renderTable(); renderEngineerCards(); updateKPIs();
+  if(Object.keys(charts).length) updateCharts(); else initCharts();
 }
 
-// ── INIT ──────────────────────────────────────────────────────────
 loadFromSheets();
 </script>
 </body>
